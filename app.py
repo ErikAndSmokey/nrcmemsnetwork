@@ -6,4 +6,4 @@ st.set_page_config(layout='wide', initial_sidebar_state='collapsed')
 
 with open('Mems Network.html', 'r') as f:
 	html_content = f.read()
-	components.html(html_content, height = 800, width = 1200)
+	components.html(html_content, height = 1000, width = 1600)
