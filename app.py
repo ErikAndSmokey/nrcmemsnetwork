@@ -4,6 +4,6 @@ import streamlit.components.v1 as components
 st.set_page_config(layout='wide', initial_sidebar_state='collapsed')
 # st.title('Members Network')
 
-with open('Mems Network.html', 'r') as f:
+with open('Mems Network 2.html', 'r') as f:
 	html_content = f.read()
 	components.html(html_content, height = 1000, width = 1600)
