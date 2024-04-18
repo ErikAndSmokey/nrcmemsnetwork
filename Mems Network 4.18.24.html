@@ -1,0 +1,929 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/css/tom-select.min.css" integrity="sha512-43fHB3GLgZfz8QXl1RPQ8O66oIgv3po9cJ5erMt1c4QISq9dYb195T3vr5ImnJPXuVroKcGBPXBFKETW8jrPNQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/js/tom-select.complete.js" integrity="sha512-jeF9CfnvzDiw9G9xiksVjxR2lib44Gnovvkv+3CgCG6NXCD4gqlA5nDAVW5WjpA+i+/zKsUWV5xNEbW1X/HH0Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 800px;
+                 background-color: #FFFFFF;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+             #loadingBar {
+                 position:absolute;
+                 top:0px;
+                 left:0px;
+                 width: 100%;
+                 height: 800px;
+                 background-color:rgba(200,200,200,0.8);
+                 -webkit-transition: all 0.5s ease;
+                 -moz-transition: all 0.5s ease;
+                 -ms-transition: all 0.5s ease;
+                 -o-transition: all 0.5s ease;
+                 transition: all 0.5s ease;
+                 opacity:1;
+             }
+
+             #bar {
+                 position:absolute;
+                 top:0px;
+                 left:0px;
+                 width:20px;
+                 height:20px;
+                 margin:auto auto auto auto;
+                 border-radius:11px;
+                 border:2px solid rgba(30,30,30,0.05);
+                 background: rgb(0, 173, 246); /* Old browsers */
+                 box-shadow: 2px 0px 4px rgba(0,0,0,0.4);
+             }
+
+             #border {
+                 position:absolute;
+                 top:10px;
+                 left:10px;
+                 width:500px;
+                 height:23px;
+                 margin:auto auto auto auto;
+                 box-shadow: 0px 0px 4px rgba(0,0,0,0.2);
+                 border-radius:10px;
+             }
+
+             #text {
+                 position:absolute;
+                 top:8px;
+                 left:530px;
+                 width:30px;
+                 height:50px;
+                 margin:auto auto auto auto;
+                 font-size:22px;
+                 color: #000000;
+             }
+
+             div.outerBorder {
+                 position:relative;
+                 top:400px;
+                 width:600px;
+                 height:44px;
+                 margin:auto auto auto auto;
+                 border:8px solid rgba(0,0,0,0.1);
+                 background: rgb(252,252,252); /* Old browsers */
+                 background: -moz-linear-gradient(top,  rgba(252,252,252,1) 0%, rgba(237,237,237,1) 100%); /* FF3.6+ */
+                 background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,rgba(252,252,252,1)), color-stop(100%,rgba(237,237,237,1))); /* Chrome,Safari4+ */
+                 background: -webkit-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* Chrome10+,Safari5.1+ */
+                 background: -o-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* Opera 11.10+ */
+                 background: -ms-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* IE10+ */
+                 background: linear-gradient(to bottom,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* W3C */
+                 filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#fcfcfc', endColorstr='#ededed',GradientType=0 ); /* IE6-9 */
+                 border-radius:72px;
+                 box-shadow: 0px 0px 10px rgba(0,0,0,0.2);
+             }
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+                <div id="select-menu" class="card-header">
+                    <div class="row no-gutters">
+                        <div class="col-10 pb-2">
+                            <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="selectNode([value]);"
+                            id="select-node"
+                            placeholder="Select node..."
+                            >
+                                <option selected>Select a Node by ID</option>
+                                
+                                    <option value="Neurodegenerative Disorders">Neurodegenerative Disorders</option>
+                                
+                                    <option value="Traumatic Brain Injury">Traumatic Brain Injury</option>
+                                
+                                    <option value="Addiction">Addiction</option>
+                                
+                                    <option value="Psychiatric Disorders">Psychiatric Disorders</option>
+                                
+                                    <option value="Neurological Disorders">Neurological Disorders</option>
+                                
+                                    <option value="Human Behavioral Research">Human Behavioral Research</option>
+                                
+                                    <option value="Pain">Pain</option>
+                                
+                                    <option value="Vascular and Circulatory System">Vascular and Circulatory System</option>
+                                
+                                    <option value="Neuroinflammation">Neuroinflammation</option>
+                                
+                                    <option value="Memory and Cognition">Memory and Cognition</option>
+                                
+                                    <option value="Behavioral and Psychiatric Research">Behavioral and Psychiatric Research</option>
+                                
+                                    <option value="Opthalmology & Vision Research">Opthalmology & Vision Research</option>
+                                
+                                    <option value="Other">Other</option>
+                                
+                                    <option value="Spinal Cord Injury & Repair">Spinal Cord Injury & Repair</option>
+                                
+                                    <option value="Neuro-oncology">Neuro-oncology</option>
+                                
+                                    <option value="Brain Circuits">Brain Circuits</option>
+                                
+                                    <option value="Cellular/Molecular Mechanisms">Cellular/Molecular Mechanisms</option>
+                                
+                                    <option value="Neuro-imaging">Neuro-imaging</option>
+                                
+                                    <option value="Seizure Disorders">Seizure Disorders</option>
+                                
+                                    <option value="Neurodevelopment">Neurodevelopment</option>
+                                
+                                    <option value="Sensation and Cognition">Sensation and Cognition</option>
+                                
+                                    <option value="Neurosurgery">Neurosurgery</option>
+                                
+                                    <option value="MCW Neuroscience Research Center">MCW Neuroscience Research Center</option>
+                                
+                                    <option value="Wei Xu">Wei Xu</option>
+                                
+                                    <option value="Amadou Camara">Amadou Camara</option>
+                                
+                                    <option value="Matthew Hearing">Matthew Hearing</option>
+                                
+                                    <option value="Kristen Bunnell">Kristen Bunnell</option>
+                                
+                                    <option value="Ryan Brennan">Ryan Brennan</option>
+                                
+                                    <option value="Karen-sue Carlson">Karen-sue Carlson</option>
+                                
+                                    <option value="Paul Barkhaus">Paul Barkhaus</option>
+                                
+                                    <option value="Alexander Helfand">Alexander Helfand</option>
+                                
+                                    <option value="Marek Cierny">Marek Cierny</option>
+                                
+                                    <option value="Qing-song Liu">Qing-song Liu</option>
+                                
+                                    <option value="Michelle Loman">Michelle Loman</option>
+                                
+                                    <option value="Jeff King">Jeff King</option>
+                                
+                                    <option value="Leslie Krause">Leslie Krause</option>
+                                
+                                    <option value="Sang Lee">Sang Lee</option>
+                                
+                                    <option value="Piero Antuono">Piero Antuono</option>
+                                
+                                    <option value="Lisa Conant">Lisa Conant</option>
+                                
+                                    <option value="Malgorzata Franczak">Malgorzata Franczak</option>
+                                
+                                    <option value="Matthew Hodges">Matthew Hodges</option>
+                                
+                                    <option value="Rachel Morris">Rachel Morris</option>
+                                
+                                    <option value="Sam Hooshmand">Sam Hooshmand</option>
+                                
+                                    <option value="Sadie Larsen">Sadie Larsen</option>
+                                
+                                    <option value="Staley Brod">Staley Brod</option>
+                                
+                                    <option value="Thomas Chelimsky">Thomas Chelimsky</option>
+                                
+                                    <option value="Benjamin Brett">Benjamin Brett</option>
+                                
+                                    <option value="Ross Collery">Ross Collery</option>
+                                
+                                    <option value="John Mantsch">John Mantsch</option>
+                                
+                                    <option value="Nashaat Gerges">Nashaat Gerges</option>
+                                
+                                    <option value="Andrew Bryant">Andrew Bryant</option>
+                                
+                                    <option value="E brooke Lerner">E brooke Lerner</option>
+                                
+                                    <option value="Susan Cohen">Susan Cohen</option>
+                                
+                                    <option value="Constanza Garcia keller">Constanza Garcia keller</option>
+                                
+                                    <option value="Andrew Foy">Andrew Foy</option>
+                                
+                                    <option value="Jennifer Evans">Jennifer Evans</option>
+                                
+                                    <option value="Binod Balakrishnan">Binod Balakrishnan</option>
+                                
+                                    <option value="Amy Heffelfinger">Amy Heffelfinger</option>
+                                
+                                    <option value="Scott Baierle">Scott Baierle</option>
+                                
+                                    <option value="Dominic Fee">Dominic Fee</option>
+                                
+                                    <option value="John Conto">John Conto</option>
+                                
+                                    <option value="Ankan Gupta">Ankan Gupta</option>
+                                
+                                    <option value="Abir El-alfy">Abir El-alfy</option>
+                                
+                                    <option value="Xiaowen Bai">Xiaowen Bai</option>
+                                
+                                    <option value="Diane Braza">Diane Braza</option>
+                                
+                                    <option value="Caron Dean-bernhoft">Caron Dean-bernhoft</option>
+                                
+                                    <option value="Michael Harris">Michael Harris</option>
+                                
+                                    <option value="Raquel Farias-moeller">Raquel Farias-moeller</option>
+                                
+                                    <option value="Xuecheng Liu">Xuecheng Liu</option>
+                                
+                                    <option value="George Jacobson">George Jacobson</option>
+                                
+                                    <option value="Matthew Harmelink">Matthew Harmelink</option>
+                                
+                                    <option value="Sean Lew">Sean Lew</option>
+                                
+                                    <option value="Zeljko Bosnjak">Zeljko Bosnjak</option>
+                                
+                                    <option value="Julia Dickson-gomez">Julia Dickson-gomez</option>
+                                
+                                    <option value="Mohit Agarwal">Mohit Agarwal</option>
+                                
+                                    <option value="Ahmed Obeidat">Ahmed Obeidat</option>
+                                
+                                    <option value="Varun Sampat">Varun Sampat</option>
+                                
+                                    <option value="Jose Rosas">Jose Rosas</option>
+                                
+                                    <option value="Bin Pan">Bin Pan</option>
+                                
+                                    <option value="Kirkwood Pritchard">Kirkwood Pritchard</option>
+                                
+                                    <option value="Katelyn Sadler">Katelyn Sadler</option>
+                                
+                                    <option value="Nicolas Pelisch">Nicolas Pelisch</option>
+                                
+                                    <option value="Hanmeng Zhang">Hanmeng Zhang</option>
+                                
+                                    <option value="Andrew Nencka">Andrew Nencka</option>
+                                
+                                    <option value="Aditya Vedantam">Aditya Vedantam</option>
+                                
+                                    <option value="Saman Shabani">Saman Shabani</option>
+                                
+                                    <option value="Hernan Rey">Hernan Rey</option>
+                                
+                                    <option value="Christopher Pawela">Christopher Pawela</option>
+                                
+                                    <option value="Steven Weisman">Steven Weisman</option>
+                                
+                                    <option value="Sakthi Sundararajan">Sakthi Sundararajan</option>
+                                
+                                    <option value="Daochun Sun">Daochun Sun</option>
+                                
+                                    <option value="Ru-jeng Teng">Ru-jeng Teng</option>
+                                
+                                    <option value="Elisabeth Vogt">Elisabeth Vogt</option>
+                                
+                                    <option value="Laura Umfleet">Laura Umfleet</option>
+                                
+                                    <option value="Jiaqing Tong">Jiaqing Tong</option>
+                                
+                                    <option value="Jennifer Tinklenberg">Jennifer Tinklenberg</option>
+                                
+                                    <option value="Yu-chieh Wang">Yu-chieh Wang</option>
+                                
+                                    <option value="Manoj Raghavan">Manoj Raghavan</option>
+                                
+                                    <option value="Kirti Thummala">Kirti Thummala</option>
+                                
+                                    <option value="Vahab Youssofzadeh">Vahab Youssofzadeh</option>
+                                
+                                    <option value="Andrey Sorokin">Andrey Sorokin</option>
+                                
+                                    <option value="Danny Thomas">Danny Thomas</option>
+                                
+                                    <option value="Cheryl Stucky">Cheryl Stucky</option>
+                                
+                                    <option value="Neeti Singh">Neeti Singh</option>
+                                
+                                    <option value="Carol i-ping Tsao">Carol i-ping Tsao</option>
+                                
+                                    <option value="Ronaldo Pereira">Ronaldo Pereira</option>
+                                
+                                    <option value="Kristin Wilmoth">Kristin Wilmoth</option>
+                                
+                                    <option value="Kelly Rentscher">Kelly Rentscher</option>
+                                
+                                    <option value="Sadaf Shad">Sadaf Shad</option>
+                                
+                                    <option value="Stephanie Olivier-van stichelen">Stephanie Olivier-van stichelen</option>
+                                
+                                    <option value="Nathan Zwagerman">Nathan Zwagerman</option>
+                                
+                                    <option value="Pablo Nakagawa">Pablo Nakagawa</option>
+                                
+                                    <option value="Rebecca Slick">Rebecca Slick</option>
+                                
+                                    <option value="Christopher White">Christopher White</option>
+                                
+                                    <option value="Shilpa Narayan">Shilpa Narayan</option>
+                                
+                                    <option value="Peter Pahapill">Peter Pahapill</option>
+                                
+                                    <option value="Michael Thomas">Michael Thomas</option>
+                                
+                                    <option value="Narayan Yoganandan">Narayan Yoganandan</option>
+                                
+                                    <option value="Casey Vickstrom">Casey Vickstrom</option>
+                                
+                                    <option value="Christopher Roberts">Christopher Roberts</option>
+                                
+                                    <option value="John Mccorvy">John Mccorvy</option>
+                                
+                                    <option value="Matthew Durand">Matthew Durand</option>
+                                
+                                    <option value="Kajana Satkunendrarajah">Kajana Satkunendrarajah</option>
+                                
+                                    <option value="Priyanka Shah-basak">Priyanka Shah-basak</option>
+                                
+                                    <option value="Curt Sigmund">Curt Sigmund</option>
+                                
+                                    <option value="Yang Wang">Yang Wang</option>
+                                
+                                    <option value="Julie Janecek">Julie Janecek</option>
+                                
+                                    <option value="Jordan Williams">Jordan Williams</option>
+                                
+                                    <option value="Hongwei Yu">Hongwei Yu</option>
+                                
+                                    <option value="Sara Pillay">Sara Pillay</option>
+                                
+                                    <option value="Grant Sinson">Grant Sinson</option>
+                                
+                                    <option value="Justin Grobe">Justin Grobe</option>
+                                
+                                    <option value="Gary Mouradian">Gary Mouradian</option>
+                                
+                                    <option value="Allison Ebert">Allison Ebert</option>
+                                
+                                    <option value="Brian Link">Brian Link</option>
+                                
+                                    <option value="Ryuma Tanaka">Ryuma Tanaka</option>
+                                
+                                    <option value="Adam Greenberg">Adam Greenberg</option>
+                                
+                                    <option value="Michael Mccrea">Michael Mccrea</option>
+                                
+                                    <option value="Astrid  Stucke">Astrid  Stucke</option>
+                                
+                                    <option value="Diane Book">Diane Book</option>
+                                
+                                    <option value="Edmund Duthie">Edmund Duthie</option>
+                                
+                                    <option value="Matthew Veldman">Matthew Veldman</option>
+                                
+                                    <option value="David Stowe">David Stowe</option>
+                                
+                                    <option value="Chad Carlson">Chad Carlson</option>
+                                
+                                    <option value="Jennifer Knight">Jennifer Knight</option>
+                                
+                                    <option value="Christina Runge">Christina Runge</option>
+                                
+                                    <option value="Terri Deroon-cassini">Terri Deroon-cassini</option>
+                                
+                                    <option value="Alan Bloom">Alan Bloom</option>
+                                
+                                    <option value="William Gross">William Gross</option>
+                                
+                                    <option value="Kathleen Patterson">Kathleen Patterson</option>
+                                
+                                    <option value="Suresh Kumar">Suresh Kumar</option>
+                                
+                                    <option value="Adriana Ioachimescu">Adriana Ioachimescu</option>
+                                
+                                    <option value="Frederick Freitag">Frederick Freitag</option>
+                                
+                                    <option value="Bhavana  Talluri">Bhavana  Talluri</option>
+                                
+                                    <option value="Balaraman Kalyanaraman">Balaraman Kalyanaraman</option>
+                                
+                                    <option value="James Hokanson">James Hokanson</option>
+                                
+                                    <option value="Joel Miesfeld">Joel Miesfeld</option>
+                                
+                                    <option value="Francesca Marassi">Francesca Marassi</option>
+                                
+                                    <option value="Nikita Piryani">Nikita Piryani</option>
+                                
+                                    <option value="Muskan Bansal">Muskan Bansal</option>
+                                
+                                    <option value="Ekokobe Fonkem">Ekokobe Fonkem</option>
+                                
+                                    <option value="Kunal Gupta">Kunal Gupta</option>
+                                
+                                    <option value="Daniel Lipinski">Daniel Lipinski</option>
+                                
+                                    <option value="Miranda Scalabrino">Miranda Scalabrino</option>
+                                
+                                    <option value="Chuck Hay">Chuck Hay</option>
+                                
+                                    <option value="Sara  Kohlbeck">Sara  Kohlbeck</option>
+                                
+                                    <option value="Joseph Kreis">Joseph Kreis</option>
+                                
+                                    <option value="Cecilia Hillard">Cecilia Hillard</option>
+                                
+                                    <option value="Robyn Furger">Robyn Furger</option>
+                                
+                                    <option value="Alex Salmon">Alex Salmon</option>
+                                
+                                    <option value="Joseph Barbieri">Joseph Barbieri</option>
+                                
+                                    <option value="David Friedland">David Friedland</option>
+                                
+                                    <option value="Jennifer Sterrett">Jennifer Sterrett</option>
+                                
+                                    <option value="Fabrice Jotterand">Fabrice Jotterand</option>
+                                
+                                    <option value="Jennifer Hill">Jennifer Hill</option>
+                                
+                                    <option value="Lynn Sheets">Lynn Sheets</option>
+                                
+                                    <option value="Hershel Raff">Hershel Raff</option>
+                                
+                                    <option value="William Drobyski">William Drobyski</option>
+                                
+                                    <option value="Timothy Meier">Timothy Meier</option>
+                                
+                                    <option value="Joseph Goveas">Joseph Goveas</option>
+                                
+                                    <option value="Lindsay Nelson">Lindsay Nelson</option>
+                                
+                                    <option value="Jyoti Sengupta">Jyoti Sengupta</option>
+                                
+                                    <option value="Ramani Ramchandran">Ramani Ramchandran</option>
+                                
+                                    <option value="Jennifer Koop">Jennifer Koop</option>
+                                
+                                    <option value="Kevin Rarick">Kevin Rarick</option>
+                                
+                                    <option value="Bonnie Dittel">Bonnie Dittel</option>
+                                
+                                    <option value="Jacek Zielonka">Jacek Zielonka</option>
+                                
+                                    <option value="Jeffrey Binder">Jeffrey Binder</option>
+                                
+                                    <option value="Xiaojie Liu">Xiaojie Liu</option>
+                                
+                                    <option value="Seung min Shin">Seung min Shin</option>
+                                
+                                    <option value="Antje Kroner-milsch">Antje Kroner-milsch</option>
+                                
+                                    <option value="Pippa Simpson">Pippa Simpson</option>
+                                
+                                    <option value="Xuelin Lou">Xuelin Lou</option>
+                                
+                                    <option value="Alissa Butts">Alissa Butts</option>
+                                
+                                    <option value="Keri Hainsworth">Keri Hainsworth</option>
+                                
+                                    <option value="Leonardo Fernandino">Leonardo Fernandino</option>
+                                
+                                    <option value="Max Krucoff">Max Krucoff</option>
+                                
+                                    <option value="Chris Olsen">Chris Olsen</option>
+                                
+                                    <option value="Irene Kim">Irene Kim</option>
+                                
+                                    <option value="Carol Everson">Carol Everson</option>
+                                
+                                    <option value="(william) youngchan Park">(william) youngchan Park</option>
+                                
+                                    <option value="Joseph Carroll">Joseph Carroll</option>
+                                
+                                    <option value="Amanda Brandow">Amanda Brandow</option>
+                                
+                                    <option value="Samuel Nemanich">Samuel Nemanich</option>
+                                
+                                    <option value="Bruce Kaufman">Bruce Kaufman</option>
+                                
+                                    <option value="Kelsey Porada">Kelsey Porada</option>
+                                
+                                    <option value="Jon Lehrmann">Jon Lehrmann</option>
+                                
+                                    <option value="Jennifer Apps">Jennifer Apps</option>
+                                
+                                    <option value="Quinn Hogan">Quinn Hogan</option>
+                                
+                                    <option value="Matthew Budde">Matthew Budde</option>
+                                
+                                    <option value="Gwendolyn Hoben">Gwendolyn Hoben</option>
+                                
+                                    <option value="Lezi E">Lezi E</option>
+                                
+                                    <option value="Maia Terashvili">Maia Terashvili</option>
+                                
+                                    <option value="Jenessa Price">Jenessa Price</option>
+                                
+                                    <option value="John Nerva">John Nerva</option>
+                                
+                                    <option value="Anthony Correro">Anthony Correro</option>
+                                
+                                    <option value="Colleen Trevino">Colleen Trevino</option>
+                                
+                                    <option value="Jonathan Enders">Jonathan Enders</option>
+                                
+                                    <option value="Jennifer Tuscher">Jennifer Tuscher</option>
+                                
+                                    <option value="Eric Jackowiak">Eric Jackowiak</option>
+                                
+                                    <option value="Frank Pintar">Frank Pintar</option>
+                                
+                                    <option value="Carissa Tomas">Carissa Tomas</option>
+                                
+                                    <option value="Tugan Muftuler">Tugan Muftuler</option>
+                                
+                                    <option value="Sydney Timmer-murillo">Sydney Timmer-murillo</option>
+                                
+                                    <option value="Shyam Chaurasia">Shyam Chaurasia</option>
+                                
+                                    <option value="Samuel Bobholz">Samuel Bobholz</option>
+                                
+                                    <option value="Sunil Mathew">Sunil Mathew</option>
+                                
+                                    <option value="Folefac Aminkeng">Folefac Aminkeng</option>
+                                
+                                    <option value="Victoria Ronan">Victoria Ronan</option>
+                                
+                                    <option value="Melissa Lancaster">Melissa Lancaster</option>
+                                
+                                    <option value="Raquel  Farias-moeller">Raquel  Farias-moeller</option>
+                                
+                                    <option value="Scott Beardsley">Scott Beardsley</option>
+                                
+                                    <option value="Allison Brezinski">Allison Brezinski</option>
+                                
+                                    <option value="Viprav Raju">Viprav Raju</option>
+                                
+                                    <option value="Iwalola Awoyinka">Iwalola Awoyinka</option>
+                                
+                                    <option value="Emily Welby">Emily Welby</option>
+                                
+                                    <option value="Rupesh Chikara">Rupesh Chikara</option>
+                                
+                                    <option value="Niyati Mehta">Niyati Mehta</option>
+                                
+                                    <option value="Pui-ying (penny) Lam">Pui-ying (penny) Lam</option>
+                                
+                            </select>
+                        </div>
+                        <div class="col-2 pb-2">
+                            <button type="button" class="btn btn-primary btn-block" onclick="neighbourhoodHighlight({nodes: []});">Reset Selection</button>
+                        </div>
+                    </div>
+                </div>
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+            <div id="loadingBar">
+              <div class="outerBorder">
+                <div id="text">0%</div>
+                <div id="border">
+                  <div id="bar"></div>
+                </div>
+              </div>
+            </div>
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+                  new TomSelect("#select-node",{
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      }
+                  });
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"color": "#E5683E", "font": {"color": "whitesmoke"}, "id": "Neurodegenerative Disorders", "label": "Neurodegenerative Disorders", "labelHighlightBold": true, "shape": "circle", "size": 250, "title": "Neurodegenerative Disorders"}, {"color": "#008651", "font": {"color": "whitesmoke"}, "id": "Traumatic Brain Injury", "label": "Traumatic Brain Injury", "labelHighlightBold": true, "shape": "circle", "size": 235, "title": "Traumatic Brain Injury"}, {"color": "#0F7B4F", "font": {"color": "whitesmoke"}, "id": "Addiction", "label": "Addiction", "labelHighlightBold": true, "shape": "circle", "size": 115, "title": "Addiction"}, {"color": "#AF8F1E", "font": {"color": "whitesmoke"}, "id": "Psychiatric Disorders", "label": "Psychiatric Disorders", "labelHighlightBold": true, "shape": "circle", "size": 130, "title": "Psychiatric Disorders"}, {"color": "#004D39", "font": {"color": "whitesmoke"}, "id": "Neurological Disorders", "label": "Neurological Disorders", "labelHighlightBold": true, "shape": "circle", "size": 635, "title": "Neurological Disorders"}, {"color": "#003B33", "font": {"color": "whitesmoke"}, "id": "Human Behavioral Research", "label": "Human Behavioral Research", "labelHighlightBold": true, "shape": "circle", "size": 160, "title": "Human Behavioral Research"}, {"color": "#28B67A", "font": {"color": "whitesmoke"}, "id": "Pain", "label": "Pain", "labelHighlightBold": true, "shape": "circle", "size": 145, "title": "Pain"}, {"color": "#005C52", "font": {"color": "whitesmoke"}, "id": "Vascular and Circulatory System", "label": "Vascular and Circulatory System", "labelHighlightBold": true, "shape": "circle", "size": 95, "title": "Vascular and Circulatory System"}, {"color": "#F88862", "font": {"color": "whitesmoke"}, "id": "Neuroinflammation", "label": "Neuroinflammation", "labelHighlightBold": true, "shape": "circle", "size": 165, "title": "Neuroinflammation"}, {"color": "#007066", "font": {"color": "whitesmoke"}, "id": "Memory and Cognition", "label": "Memory and Cognition", "labelHighlightBold": true, "shape": "circle", "size": 185, "title": "Memory and Cognition"}, {"color": "#1F66AA", "font": {"color": "whitesmoke"}, "id": "Behavioral and Psychiatric Research", "label": "Behavioral and Psychiatric Research", "labelHighlightBold": true, "shape": "circle", "size": 145, "title": "Behavioral and Psychiatric Research"}, {"color": "#0A1C32", "font": {"color": "whitesmoke"}, "id": "Opthalmology \u0026 Vision Research", "label": "Opthalmology \u0026 Vision Research", "labelHighlightBold": true, "shape": "circle", "size": 85, "title": "Opthalmology \u0026 Vision Research"}, {"color": "#5091CD", "font": {"color": "whitesmoke"}, "id": "Other", "label": "Other", "labelHighlightBold": true, "shape": "circle", "size": 70, "title": "Other"}, {"color": "#1FA76C", "font": {"color": "whitesmoke"}, "id": "Spinal Cord Injury \u0026 Repair", "label": "Spinal Cord Injury \u0026 Repair", "labelHighlightBold": true, "shape": "circle", "size": 95, "title": "Spinal Cord Injury \u0026 Repair"}, {"color": "#DFC429", "font": {"color": "whitesmoke"}, "id": "Neuro-oncology", "label": "Neuro-oncology", "labelHighlightBold": true, "shape": "circle", "size": 60, "title": "Neuro-oncology"}, {"color": "#58133F", "font": {"color": "whitesmoke"}, "id": "Brain Circuits", "label": "Brain Circuits", "labelHighlightBold": true, "shape": "circle", "size": 60, "title": "Brain Circuits"}, {"color": "#163359", "font": {"color": "whitesmoke"}, "id": "Cellular/Molecular Mechanisms", "label": "Cellular/Molecular Mechanisms", "labelHighlightBold": true, "shape": "circle", "size": 90, "title": "Cellular/Molecular Mechanisms"}, {"color": "#1D8E58", "font": {"color": "whitesmoke"}, "id": "Neuro-imaging", "label": "Neuro-imaging", "labelHighlightBold": true, "shape": "circle", "size": 70, "title": "Neuro-imaging"}, {"color": "#070F1F", "font": {"color": "whitesmoke"}, "id": "Seizure Disorders", "label": "Seizure Disorders", "labelHighlightBold": true, "shape": "circle", "size": 35, "title": "Seizure Disorders"}, {"color": "#C43427", "font": {"color": "whitesmoke"}, "id": "Neurodevelopment", "label": "Neurodevelopment", "labelHighlightBold": true, "shape": "circle", "size": 50, "title": "Neurodevelopment"}, {"color": "#377AA5", "font": {"color": "whitesmoke"}, "id": "Sensation and Cognition", "label": "Sensation and Cognition", "labelHighlightBold": true, "shape": "circle", "size": 30, "title": "Sensation and Cognition"}, {"color": "#977B15", "font": {"color": "whitesmoke"}, "id": "Neurosurgery", "label": "Neurosurgery", "labelHighlightBold": true, "shape": "circle", "size": 25, "title": "Neurosurgery"}, {"color": "#7A256E", "font": {"color": "whitesmoke"}, "id": "MCW Neuroscience Research Center", "label": "MCW Neuroscience Research Center", "labelHighlightBold": true, "shape": "circle", "size": 1080, "title": "MCW Neuroscience Research Center"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Wei Xu", "label": "Wei Xu", "shape": "dot", "size": 10, "title": "Name: Wei Xu\nConnected to: [\u0027Neurodegenerative Disorders\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Institute for Health \u0026 Equity"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Amadou Camara", "label": "Amadou Camara", "shape": "dot", "size": 10, "title": "Name: Amadou Camara\nConnected to: [\u0027Traumatic Brain Injury\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Anesthesiology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Matthew Hearing", "label": "Matthew Hearing", "shape": "dot", "size": 10, "title": "Name: Matthew Hearing\nConnected to: [\u0027Addiction\u0027 \u0027Psychiatric Disorders\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Biomedical Engineering"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Kristen Bunnell", "label": "Kristen Bunnell", "shape": "dot", "size": 10, "title": "Name: Kristen Bunnell\nConnected to: [\u0027Neurological Disorders\u0027 \u0027Neurological Disorders\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Pharmacy School"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Ryan Brennan", "label": "Ryan Brennan", "shape": "dot", "size": 10, "title": "Name: Ryan Brennan\nConnected to: [\u0027Neurological Disorders\u0027 \u0027Neurological Disorders\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Neurology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Karen-sue Carlson", "label": "Karen-sue Carlson", "shape": "dot", "size": 10, "title": "Name: Karen-sue Carlson\nConnected to: [\u0027Neurological Disorders\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: General Internal Medicine"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Paul Barkhaus", "label": "Paul Barkhaus", "shape": "dot", "size": 10, "title": "Name: Paul Barkhaus\nConnected to: [\u0027Neurological Disorders\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Neurology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Alexander Helfand", "label": "Alexander Helfand", "shape": "dot", "size": 10, "title": "Name: Alexander Helfand\nConnected to: [\u0027Addiction\u0027 \u0027Human Behavioral Research\u0027 \u0027Neurodegenerative Disorders\u0027\n \u0027Pain\u0027 \u0027Psychiatric Disorders\u0027 \u0027Traumatic Brain Injury\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Biophysics"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Marek Cierny", "label": "Marek Cierny", "shape": "dot", "size": 10, "title": "Name: Marek Cierny\nConnected to: [\u0027Vascular and Circulatory System\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Neurology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Qing-song Liu", "label": "Qing-song Liu", "shape": "dot", "size": 10, "title": "Name: Qing-song Liu\nConnected to: [\u0027Addiction\u0027 \u0027Neurodegenerative Disorders\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Pharmacology and Toxicology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Michelle Loman", "label": "Michelle Loman", "shape": "dot", "size": 10, "title": "Name: Michelle Loman\nConnected to: [\u0027Neurological Disorders\u0027 \u0027Neurological Disorders\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Neurology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Jeff King", "label": "Jeff King", "shape": "dot", "size": 10, "title": "Name: Jeff King\nConnected to: [\u0027Pain\u0027 \u0027Traumatic Brain Injury\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Neurosurgery"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Leslie Krause", "label": "Leslie Krause", "shape": "dot", "size": 10, "title": "Name: Leslie Krause\nConnected to: [\u0027Addiction\u0027 \u0027Neuroinflammation\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Pharmacology and Toxicology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Sang Lee", "label": "Sang Lee", "shape": "dot", "size": 10, "title": "Name: Sang Lee\nConnected to: [\u0027Memory and Cognition\u0027 \u0027Memory and Cognition\u0027 \u0027Memory and Cognition\u0027\n \u0027Memory and Cognition\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Pharmacology and Toxicology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Piero Antuono", "label": "Piero Antuono", "shape": "dot", "size": 10, "title": "Name: Piero Antuono\nConnected to: [\u0027Neurodegenerative Disorders\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Neurology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Lisa Conant", "label": "Lisa Conant", "shape": "dot", "size": 10, "title": "Name: Lisa Conant\nConnected to: [\u0027Memory and Cognition\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Neurology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Malgorzata Franczak", "label": "Malgorzata Franczak", "shape": "dot", "size": 10, "title": "Name: Malgorzata Franczak\nConnected to: [\u0027Neurodegenerative Disorders\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Neurology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Matthew Hodges", "label": "Matthew Hodges", "shape": "dot", "size": 10, "title": "Name: Matthew Hodges\nConnected to: [\u0027Neurological Disorders\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Physiology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Rachel Morris", "label": "Rachel Morris", "shape": "dot", "size": 10, "title": "Name: Rachel Morris\nConnected to: [\u0027Traumatic Brain Injury\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Surgery"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Sam Hooshmand", "label": "Sam Hooshmand", "shape": "dot", "size": 10, "title": "Name: Sam Hooshmand\nConnected to: [\u0027Neurological Disorders\u0027 \u0027Neurological Disorders\u0027\n \u0027Neurological Disorders\u0027 \u0027Neurological Disorders\u0027\n \u0027Neurological Disorders\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Neurology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Sadie Larsen", "label": "Sadie Larsen", "shape": "dot", "size": 10, "title": "Name: Sadie Larsen\nConnected to: [\u0027Human Behavioral Research\u0027 \u0027Psychiatric Disorders\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Psychiatry and Behavioral Medicine"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Staley Brod", "label": "Staley Brod", "shape": "dot", "size": 10, "title": "Name: Staley Brod\nConnected to: [\u0027Neurodegenerative Disorders\u0027 \u0027Neuroinflammation\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Neurology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Thomas Chelimsky", "label": "Thomas Chelimsky", "shape": "dot", "size": 10, "title": "Name: Thomas Chelimsky\nConnected to: [\u0027Neurological Disorders\u0027 \u0027Neurological Disorders\u0027\n \u0027Neurological Disorders\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Neurology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Benjamin Brett", "label": "Benjamin Brett", "shape": "dot", "size": 10, "title": "Name: Benjamin Brett\nConnected to: [\u0027Behavioral and Psychiatric Research\u0027\n \u0027Behavioral and Psychiatric Research\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Neurosurgery"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Ross Collery", "label": "Ross Collery", "shape": "dot", "size": 10, "title": "Name: Ross Collery\nConnected to: [\u0027Neurodegenerative Disorders\u0027 \u0027Opthalmology \u0026 Vision Research\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Ophthalmology and Visual Sciences"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "John Mantsch", "label": "John Mantsch", "shape": "dot", "size": 10, "title": "Name: John Mantsch\nConnected to: [\u0027Addiction\u0027 \u0027Psychiatric Disorders\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Pharmacology and Toxicology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Nashaat Gerges", "label": "Nashaat Gerges", "shape": "dot", "size": 10, "title": "Name: Nashaat Gerges\nConnected to: [\u0027Neurological Disorders\u0027 \u0027Neurological Disorders\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Pharmacy School"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Andrew Bryant", "label": "Andrew Bryant", "shape": "dot", "size": 10, "title": "Name: Andrew Bryant\nConnected to: [\u0027Traumatic Brain Injury\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Neurology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "E brooke Lerner", "label": "E brooke Lerner", "shape": "dot", "size": 10, "title": "Name: E brooke Lerner\nConnected to: [\u0027Addiction\u0027 \u0027Human Behavioral Research\u0027 \u0027Traumatic Brain Injury\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Emergency Medicine"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Susan Cohen", "label": "Susan Cohen", "shape": "dot", "size": 10, "title": "Name: Susan Cohen\nConnected to: [\u0027Neurological Disorders\u0027 \u0027Neurological Disorders\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Pediatrics"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Constanza Garcia keller", "label": "Constanza Garcia keller", "shape": "dot", "size": 10, "title": "Name: Constanza Garcia keller\nConnected to: [\u0027Addiction\u0027 \u0027Neuroinflammation\u0027 \u0027Psychiatric Disorders\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Pharmacology and Toxicology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Andrew Foy", "label": "Andrew Foy", "shape": "dot", "size": 10, "title": "Name: Andrew Foy\nConnected to: [\u0027Neurological Disorders\u0027 \u0027Neurological Disorders\u0027\n \u0027Neurological Disorders\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Neurosurgery"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Jennifer Evans", "label": "Jennifer Evans", "shape": "dot", "size": 10, "title": "Name: Jennifer Evans\nConnected to: [\u0027Neurological Disorders\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Biomedical Engineering"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Binod Balakrishnan", "label": "Binod Balakrishnan", "shape": "dot", "size": 10, "title": "Name: Binod Balakrishnan\nConnected to: [\u0027Traumatic Brain Injury\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Pediatrics"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Amy Heffelfinger", "label": "Amy Heffelfinger", "shape": "dot", "size": 10, "title": "Name: Amy Heffelfinger\nConnected to: [\u0027Neurological Disorders\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Neurology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Scott Baierle", "label": "Scott Baierle", "shape": "dot", "size": 10, "title": "Name: Scott Baierle\nConnected to: [\u0027Human Behavioral Research\u0027 \u0027Neurodegenerative Disorders\u0027 \u0027Other\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Neurology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Dominic Fee", "label": "Dominic Fee", "shape": "dot", "size": 10, "title": "Name: Dominic Fee\nConnected to: [\u0027Neurodegenerative Disorders\u0027 \u0027Neuroinflammation\u0027\n \u0027Spinal Cord Injury \u0026 Repair\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Neurology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "John Conto", "label": "John Conto", "shape": "dot", "size": 10, "title": "Name: John Conto\nConnected to: [\u0027Opthalmology \u0026 Vision Research\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Ophthalmology and Visual Sciences"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Ankan Gupta", "label": "Ankan Gupta", "shape": "dot", "size": 10, "title": "Name: Ankan Gupta\nConnected to: [\u0027Neurodegenerative Disorders\u0027 \u0027Neuroinflammation\u0027\n \u0027Traumatic Brain Injury\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Pediatrics"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Abir El-alfy", "label": "Abir El-alfy", "shape": "dot", "size": 10, "title": "Name: Abir El-alfy\nConnected to: [\u0027Addiction\u0027 \u0027Pain\u0027 \u0027Psychiatric Disorders\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Pharmacy School"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Xiaowen Bai", "label": "Xiaowen Bai", "shape": "dot", "size": 10, "title": "Name: Xiaowen Bai\nConnected to: [\u0027Neurodegenerative Disorders\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Cell Biology, Neurobiology and Anatomy (CBNA)"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Diane Braza", "label": "Diane Braza", "shape": "dot", "size": 10, "title": "Name: Diane Braza\nConnected to: [\u0027Neurological Disorders\u0027 \u0027Neurological Disorders\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Physical Medicine and Rehabilitation"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Caron Dean-bernhoft", "label": "Caron Dean-bernhoft", "shape": "dot", "size": 10, "title": "Name: Caron Dean-bernhoft\nConnected to: [\u0027Pain\u0027 \u0027Traumatic Brain Injury\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Anesthesiology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Michael Harris", "label": "Michael Harris", "shape": "dot", "size": 10, "title": "Name: Michael Harris\nConnected to: [\u0027Neurological Disorders\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Otolaryngology and Communication Sciences"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Raquel Farias-moeller", "label": "Raquel Farias-moeller", "shape": "dot", "size": 10, "title": "Name: Raquel Farias-moeller\nConnected to: [\u0027Neurological Disorders\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Neurology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Xuecheng Liu", "label": "Xuecheng Liu", "shape": "dot", "size": 10, "title": "Name: Xuecheng Liu\nConnected to: [\u0027Neurological Disorders\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Orthopaedic Surgery"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "George Jacobson", "label": "George Jacobson", "shape": "dot", "size": 10, "title": "Name: George Jacobson\nConnected to: [\u0027Addiction\u0027 \u0027Human Behavioral Research\u0027 \u0027Pain\u0027 \u0027Psychiatric Disorders\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Psychiatry and Behavioral Medicine"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Matthew Harmelink", "label": "Matthew Harmelink", "shape": "dot", "size": 10, "title": "Name: Matthew Harmelink\nConnected to: [\u0027Neurological Disorders\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Neurology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Sean Lew", "label": "Sean Lew", "shape": "dot", "size": 10, "title": "Name: Sean Lew\nConnected to: [\u0027Neurological Disorders\u0027 \u0027Neurological Disorders\u0027\n \u0027Neurological Disorders\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Neurosurgery"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Zeljko Bosnjak", "label": "Zeljko Bosnjak", "shape": "dot", "size": 10, "title": "Name: Zeljko Bosnjak\nConnected to: [\u0027Neuroinflammation\u0027 \u0027Traumatic Brain Injury\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Medicine"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Julia Dickson-gomez", "label": "Julia Dickson-gomez", "shape": "dot", "size": 10, "title": "Name: Julia Dickson-gomez\nConnected to: [\u0027Addiction\u0027 \u0027Human Behavioral Research\u0027 \u0027Pain\u0027 \u0027Psychiatric Disorders\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Institute for Health \u0026 Equity"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Mohit Agarwal", "label": "Mohit Agarwal", "shape": "dot", "size": 10, "title": "Name: Mohit Agarwal\nConnected to: [\u0027Human Behavioral Research\u0027 \u0027Neurodegenerative Disorders\u0027\n \u0027Neuro-oncology\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Radiology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Ahmed Obeidat", "label": "Ahmed Obeidat", "shape": "dot", "size": 10, "title": "Name: Ahmed Obeidat\nConnected to: [\u0027Neurological Disorders\u0027 \u0027Neurological Disorders\u0027\n \u0027Neurological Disorders\u0027 \u0027Neurological Disorders\u0027\n \u0027Neurological Disorders\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Neurology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Varun Sampat", "label": "Varun Sampat", "shape": "dot", "size": 10, "title": "Name: Varun Sampat\nConnected to: [\u0027Traumatic Brain Injury\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Neurology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Jose Rosas", "label": "Jose Rosas", "shape": "dot", "size": 10, "title": "Name: Jose Rosas\nConnected to: [\u0027Neuroinflammation\u0027 \u0027Spinal Cord Injury \u0026 Repair\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Neurosurgery"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Bin Pan", "label": "Bin Pan", "shape": "dot", "size": 10, "title": "Name: Bin Pan\nConnected to: [\u0027Pain\u0027 \u0027Psychiatric Disorders\u0027 \u0027Traumatic Brain Injury\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Anesthesiology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Kirkwood Pritchard", "label": "Kirkwood Pritchard", "shape": "dot", "size": 10, "title": "Name: Kirkwood Pritchard\nConnected to: [\u0027Neurological Disorders\u0027 \u0027Neurological Disorders\u0027\n \u0027Neurological Disorders\u0027 \u0027Neurological Disorders\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Surgery"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Katelyn Sadler", "label": "Katelyn Sadler", "shape": "dot", "size": 10, "title": "Name: Katelyn Sadler\nConnected to: [\u0027Pain\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Cell Biology, Neurobiology and Anatomy (CBNA)"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Nicolas Pelisch", "label": "Nicolas Pelisch", "shape": "dot", "size": 10, "title": "Name: Nicolas Pelisch\nConnected to: [\u0027Neuroinflammation\u0027 \u0027Spinal Cord Injury \u0026 Repair\u0027\n \u0027Traumatic Brain Injury\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Neurosurgery"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Hanmeng Zhang", "label": "Hanmeng Zhang", "shape": "dot", "size": 10, "title": "Name: Hanmeng Zhang\nConnected to: [\u0027Opthalmology \u0026 Vision Research\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Cell Biology, Neurobiology and Anatomy (CBNA)"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Andrew Nencka", "label": "Andrew Nencka", "shape": "dot", "size": 10, "title": "Name: Andrew Nencka\nConnected to: [\u0027Neurodegenerative Disorders\u0027 \u0027Traumatic Brain Injury\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Radiology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Aditya Vedantam", "label": "Aditya Vedantam", "shape": "dot", "size": 10, "title": "Name: Aditya Vedantam\nConnected to: [\u0027Spinal Cord Injury \u0026 Repair\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Neurosurgery"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Saman Shabani", "label": "Saman Shabani", "shape": "dot", "size": 10, "title": "Name: Saman Shabani\nConnected to: [\u0027Neurodegenerative Disorders\u0027 \u0027Neuro-oncology\u0027\n \u0027Spinal Cord Injury \u0026 Repair\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Neurosurgery"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Hernan Rey", "label": "Hernan Rey", "shape": "dot", "size": 10, "title": "Name: Hernan Rey\nConnected to: [\u0027Memory and Cognition\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Neurosurgery"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Christopher Pawela", "label": "Christopher Pawela", "shape": "dot", "size": 10, "title": "Name: Christopher Pawela\nConnected to: [\u0027Neurological Disorders\u0027 \u0027Neurological Disorders\u0027\n \u0027Neurological Disorders\u0027 \u0027Neurological Disorders\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Anesthesiology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Steven Weisman", "label": "Steven Weisman", "shape": "dot", "size": 10, "title": "Name: Steven Weisman\nConnected to: [\u0027Human Behavioral Research\u0027 \u0027Pain\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Anesthesiology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Sakthi Sundararajan", "label": "Sakthi Sundararajan", "shape": "dot", "size": 10, "title": "Name: Sakthi Sundararajan\nConnected to: [\u0027Human Behavioral Research\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Medicine"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Daochun Sun", "label": "Daochun Sun", "shape": "dot", "size": 10, "title": "Name: Daochun Sun\nConnected to: [\u0027Neuro-oncology\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Cell Biology, Neurobiology and Anatomy (CBNA)"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Ru-jeng Teng", "label": "Ru-jeng Teng", "shape": "dot", "size": 10, "title": "Name: Ru-jeng Teng\nConnected to: [\u0027Neurological Disorders\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Pediatrics"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Elisabeth Vogt", "label": "Elisabeth Vogt", "shape": "dot", "size": 10, "title": "Name: Elisabeth Vogt\nConnected to: [\u0027Behavioral and Psychiatric Research\u0027\n \u0027Behavioral and Psychiatric Research\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Neurology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Laura Umfleet", "label": "Laura Umfleet", "shape": "dot", "size": 10, "title": "Name: Laura Umfleet\nConnected to: [\u0027Neurological Disorders\u0027 \u0027Neurological Disorders\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Neurology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Jiaqing Tong", "label": "Jiaqing Tong", "shape": "dot", "size": 10, "title": "Name: Jiaqing Tong\nConnected to: [\u0027Human Behavioral Research\u0027 \u0027Psychiatric Disorders\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Biophysics"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Jennifer Tinklenberg", "label": "Jennifer Tinklenberg", "shape": "dot", "size": 10, "title": "Name: Jennifer Tinklenberg\nConnected to: [\u0027Other\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Physiology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Yu-chieh Wang", "label": "Yu-chieh Wang", "shape": "dot", "size": 10, "title": "Name: Yu-chieh Wang\nConnected to: [\u0027Neurological Disorders\u0027 \u0027Neurological Disorders\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Dermatology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Manoj Raghavan", "label": "Manoj Raghavan", "shape": "dot", "size": 10, "title": "Name: Manoj Raghavan\nConnected to: [\u0027Neurological Disorders\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Neurology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Kirti Thummala", "label": "Kirti Thummala", "shape": "dot", "size": 10, "title": "Name: Kirti Thummala\nConnected to: [\u0027Human Behavioral Research\u0027 \u0027Pain\u0027 \u0027Psychiatric Disorders\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Neurology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Vahab Youssofzadeh", "label": "Vahab Youssofzadeh", "shape": "dot", "size": 10, "title": "Name: Vahab Youssofzadeh\nConnected to: [\u0027Memory and Cognition\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Neurology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Andrey Sorokin", "label": "Andrey Sorokin", "shape": "dot", "size": 10, "title": "Name: Andrey Sorokin\nConnected to: [\u0027Memory and Cognition\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Medicine"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Danny Thomas", "label": "Danny Thomas", "shape": "dot", "size": 10, "title": "Name: Danny Thomas\nConnected to: [\u0027Traumatic Brain Injury\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Pediatrics"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Cheryl Stucky", "label": "Cheryl Stucky", "shape": "dot", "size": 10, "title": "Name: Cheryl Stucky\nConnected to: [\u0027Addiction\u0027 \u0027Neuroinflammation\u0027 \u0027Pain\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Cell Biology, Neurobiology and Anatomy (CBNA)"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Neeti Singh", "label": "Neeti Singh", "shape": "dot", "size": 10, "title": "Name: Neeti Singh\nConnected to: [\u0027Neurodegenerative Disorders\u0027 \u0027Spinal Cord Injury \u0026 Repair\u0027\n \u0027Traumatic Brain Injury\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Other"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Carol i-ping Tsao", "label": "Carol i-ping Tsao", "shape": "dot", "size": 10, "title": "Name: Carol i-ping Tsao\nConnected to: [\u0027Psychiatric Disorders\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Psychiatry and Behavioral Medicine"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Ronaldo Pereira", "label": "Ronaldo Pereira", "shape": "dot", "size": 10, "title": "Name: Ronaldo Pereira\nConnected to: [\u0027Memory and Cognition\u0027 \u0027Memory and Cognition\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Other"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Kristin Wilmoth", "label": "Kristin Wilmoth", "shape": "dot", "size": 10, "title": "Name: Kristin Wilmoth\nConnected to: [\u0027Traumatic Brain Injury\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Neurology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Kelly Rentscher", "label": "Kelly Rentscher", "shape": "dot", "size": 10, "title": "Name: Kelly Rentscher\nConnected to: [\u0027Neurological Disorders\u0027 \u0027Neurological Disorders\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Psychiatry and Behavioral Medicine"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Sadaf Shad", "label": "Sadaf Shad", "shape": "dot", "size": 10, "title": "Name: Sadaf Shad\nConnected to: [\u0027Human Behavioral Research\u0027 \u0027Neurodegenerative Disorders\u0027\n \u0027Neuroinflammation\u0027 \u0027Neuro-oncology\u0027 \u0027Opthalmology \u0026 Vision Research\u0027\n \u0027Pain\u0027 \u0027Spinal Cord Injury \u0026 Repair\u0027 \u0027Traumatic Brain Injury\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Medicine"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Stephanie Olivier-van stichelen", "label": "Stephanie Olivier-van stichelen", "shape": "dot", "size": 10, "title": "Name: Stephanie Olivier-van stichelen\nConnected to: [\u0027Neurological Disorders\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Biochemistry"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Nathan Zwagerman", "label": "Nathan Zwagerman", "shape": "dot", "size": 10, "title": "Name: Nathan Zwagerman\nConnected to: [\u0027Neuro-oncology\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Neurosurgery"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Pablo Nakagawa", "label": "Pablo Nakagawa", "shape": "dot", "size": 10, "title": "Name: Pablo Nakagawa\nConnected to: [\u0027Neurological Disorders\u0027 \u0027Neurological Disorders\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Physiology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Rebecca Slick", "label": "Rebecca Slick", "shape": "dot", "size": 10, "title": "Name: Rebecca Slick\nConnected to: [\u0027Neurodegenerative Disorders\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Physiology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Christopher White", "label": "Christopher White", "shape": "dot", "size": 10, "title": "Name: Christopher White\nConnected to: [\u0027Behavioral and Psychiatric Research\u0027\n \u0027Behavioral and Psychiatric Research\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Physical Medicine and Rehabilitation"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Shilpa Narayan", "label": "Shilpa Narayan", "shape": "dot", "size": 10, "title": "Name: Shilpa Narayan\nConnected to: [\u0027Neuroinflammation\u0027 \u0027Traumatic Brain Injury\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Pediatrics"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Peter Pahapill", "label": "Peter Pahapill", "shape": "dot", "size": 10, "title": "Name: Peter Pahapill\nConnected to: [\u0027Neurodegenerative Disorders\u0027 \u0027Pain\u0027 \u0027Spinal Cord Injury \u0026 Repair\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Neurosurgery"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Michael Thomas", "label": "Michael Thomas", "shape": "dot", "size": 10, "title": "Name: Michael Thomas\nConnected to: [\u0027Neurological Disorders\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Pharmacology and Toxicology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Narayan Yoganandan", "label": "Narayan Yoganandan", "shape": "dot", "size": 10, "title": "Name: Narayan Yoganandan\nConnected to: [\u0027Neurological Disorders\u0027 \u0027Neurological Disorders\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Neurosurgery"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Casey Vickstrom", "label": "Casey Vickstrom", "shape": "dot", "size": 10, "title": "Name: Casey Vickstrom\nConnected to: [\u0027Addiction\u0027 \u0027Psychiatric Disorders\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Pharmacology and Toxicology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Christopher Roberts", "label": "Christopher Roberts", "shape": "dot", "size": 10, "title": "Name: Christopher Roberts\nConnected to: [\u0027Addiction\u0027 \u0027Brain Circuits\u0027 \u0027Human Behavioral Research\u0027\n \u0027Neurodegenerative Disorders\u0027 \u0027Neuroinflammation\u0027 \u0027Pain\u0027\n \u0027Psychiatric Disorders\u0027 \u0027Spinal Cord Injury \u0026 Repair\u0027\n \u0027Traumatic Brain Injury\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Anesthesiology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "John Mccorvy", "label": "John Mccorvy", "shape": "dot", "size": 10, "title": "Name: John Mccorvy\nConnected to: [\u0027Behavioral and Psychiatric Research\u0027\n \u0027Behavioral and Psychiatric Research\u0027\n \u0027Behavioral and Psychiatric Research\u0027\n \u0027Behavioral and Psychiatric Research\u0027\n \u0027Behavioral and Psychiatric Research\u0027\n \u0027Behavioral and Psychiatric Research\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Cell Biology, Neurobiology and Anatomy (CBNA)"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Matthew Durand", "label": "Matthew Durand", "shape": "dot", "size": 10, "title": "Name: Matthew Durand\nConnected to: [\u0027Neurological Disorders\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Physical Medicine and Rehabilitation"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Kajana Satkunendrarajah", "label": "Kajana Satkunendrarajah", "shape": "dot", "size": 10, "title": "Name: Kajana Satkunendrarajah\nConnected to: [\u0027Brain Circuits\u0027 \u0027Cellular/Molecular Mechanisms\u0027\n \u0027Neurodegenerative Disorders\u0027 \u0027Spinal Cord Injury \u0026 Repair\u0027\n \u0027Traumatic Brain Injury\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Neurosurgery"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Priyanka Shah-basak", "label": "Priyanka Shah-basak", "shape": "dot", "size": 10, "title": "Name: Priyanka Shah-basak\nConnected to: [\u0027Neurological Disorders\u0027 \u0027Neurological Disorders\u0027\n \u0027Neurological Disorders\u0027 \u0027Neurological Disorders\u0027\n \u0027Neurological Disorders\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Neurology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Curt Sigmund", "label": "Curt Sigmund", "shape": "dot", "size": 10, "title": "Name: Curt Sigmund\nConnected to: [\u0027Vascular and Circulatory System\u0027 \u0027Vascular and Circulatory System\u0027\n \u0027Vascular and Circulatory System\u0027 \u0027Vascular and Circulatory System\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Physiology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Yang Wang", "label": "Yang Wang", "shape": "dot", "size": 10, "title": "Name: Yang Wang\nConnected to: [\u0027Brain Circuits\u0027 \u0027Neurodegenerative Disorders\u0027 \u0027Neuro-imaging\u0027\n \u0027Psychiatric Disorders\u0027 \u0027Traumatic Brain Injury\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Radiology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Julie Janecek", "label": "Julie Janecek", "shape": "dot", "size": 10, "title": "Name: Julie Janecek\nConnected to: [\u0027Neurodegenerative Disorders\u0027 \u0027Seizure Disorders\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Neurology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Jordan Williams", "label": "Jordan Williams", "shape": "dot", "size": 10, "title": "Name: Jordan Williams\nConnected to: [\u0027Neurological Disorders\u0027 \u0027Neurological Disorders\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Biomedical Engineering"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Hongwei Yu", "label": "Hongwei Yu", "shape": "dot", "size": 10, "title": "Name: Hongwei Yu\nConnected to: [\u0027Cellular/Molecular Mechanisms\u0027 \u0027Pain\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Anesthesiology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Sara Pillay", "label": "Sara Pillay", "shape": "dot", "size": 10, "title": "Name: Sara Pillay\nConnected to: [\u0027Neurological Disorders\u0027 \u0027Neurological Disorders\u0027\n \u0027Neurological Disorders\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Neurology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Grant Sinson", "label": "Grant Sinson", "shape": "dot", "size": 10, "title": "Name: Grant Sinson\nConnected to: [\u0027Neurological Disorders\u0027 \u0027Neurological Disorders\u0027\n \u0027Neurological Disorders\u0027 \u0027Neurological Disorders\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Neurosurgery"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Justin Grobe", "label": "Justin Grobe", "shape": "dot", "size": 10, "title": "Name: Justin Grobe\nConnected to: [\u0027Vascular and Circulatory System\u0027 \u0027Vascular and Circulatory System\u0027\n \u0027Vascular and Circulatory System\u0027 \u0027Vascular and Circulatory System\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Physiology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Gary Mouradian", "label": "Gary Mouradian", "shape": "dot", "size": 10, "title": "Name: Gary Mouradian\nConnected to: [\u0027Neurological Disorders\u0027 \u0027Neurological Disorders\u0027\n \u0027Neurological Disorders\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Physiology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Allison Ebert", "label": "Allison Ebert", "shape": "dot", "size": 10, "title": "Name: Allison Ebert\nConnected to: [\u0027Cellular/Molecular Mechanisms\u0027 \u0027Neurodegenerative Disorders\u0027\n \u0027Neurodevelopment\u0027 \u0027Neuroinflammation\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Cell Biology, Neurobiology and Anatomy (CBNA)"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Brian Link", "label": "Brian Link", "shape": "dot", "size": 10, "title": "Name: Brian Link\nConnected to: [\u0027Neurodegenerative Disorders\u0027 \u0027Neurodevelopment\u0027\n \u0027Opthalmology \u0026 Vision Research\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Cell Biology, Neurobiology and Anatomy (CBNA)"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Ryuma Tanaka", "label": "Ryuma Tanaka", "shape": "dot", "size": 10, "title": "Name: Ryuma Tanaka\nConnected to: [\u0027Neuro-oncology\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Pediatrics"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Adam Greenberg", "label": "Adam Greenberg", "shape": "dot", "size": 10, "title": "Name: Adam Greenberg\nConnected to: [\u0027Memory and Cognition\u0027 \u0027Memory and Cognition\u0027 \u0027Memory and Cognition\u0027\n \u0027Memory and Cognition\u0027 \u0027Memory and Cognition\u0027 \u0027Memory and Cognition\u0027\n \u0027Memory and Cognition\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Biomedical Engineering"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Michael Mccrea", "label": "Michael Mccrea", "shape": "dot", "size": 10, "title": "Name: Michael Mccrea\nConnected to: [\u0027Traumatic Brain Injury\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Neurosurgery"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Astrid  Stucke", "label": "Astrid  Stucke", "shape": "dot", "size": 10, "title": "Name: Astrid  Stucke\nConnected to: [\u0027Neurological Disorders\u0027 \u0027Neurological Disorders\u0027\n \u0027Neurological Disorders\u0027 \u0027Neurological Disorders\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Anesthesiology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Diane Book", "label": "Diane Book", "shape": "dot", "size": 10, "title": "Name: Diane Book\nConnected to: [\u0027Neurodegenerative Disorders\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Neurology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Edmund Duthie", "label": "Edmund Duthie", "shape": "dot", "size": 10, "title": "Name: Edmund Duthie\nConnected to: [\u0027Neurodegenerative Disorders\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Medicine"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Matthew Veldman", "label": "Matthew Veldman", "shape": "dot", "size": 10, "title": "Name: Matthew Veldman\nConnected to: [\u0027Cellular/Molecular Mechanisms\u0027 \u0027Neurodegenerative Disorders\u0027\n \u0027Neurodevelopment\u0027 \u0027Opthalmology \u0026 Vision Research\u0027\n \u0027Spinal Cord Injury \u0026 Repair\u0027 \u0027Traumatic Brain Injury\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Cell Biology, Neurobiology and Anatomy (CBNA)"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "David Stowe", "label": "David Stowe", "shape": "dot", "size": 10, "title": "Name: David Stowe\nConnected to: [\u0027Addiction\u0027 \u0027Pain\u0027 \u0027Traumatic Brain Injury\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Anesthesiology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Chad Carlson", "label": "Chad Carlson", "shape": "dot", "size": 10, "title": "Name: Chad Carlson\nConnected to: [\u0027Neurological Disorders\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Neurology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Jennifer Knight", "label": "Jennifer Knight", "shape": "dot", "size": 10, "title": "Name: Jennifer Knight\nConnected to: [\u0027Behavioral and Psychiatric Research\u0027\n \u0027Behavioral and Psychiatric Research\u0027\n \u0027Behavioral and Psychiatric Research\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Psychiatry and Behavioral Medicine"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Christina Runge", "label": "Christina Runge", "shape": "dot", "size": 10, "title": "Name: Christina Runge\nConnected to: [\u0027Neurological Disorders\u0027 \u0027Neurological Disorders\u0027\n \u0027Neurological Disorders\u0027 \u0027Neurological Disorders\u0027\n \u0027Neurological Disorders\u0027 \u0027Neurological Disorders\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Otolaryngology and Communication Sciences"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Terri Deroon-cassini", "label": "Terri Deroon-cassini", "shape": "dot", "size": 10, "title": "Name: Terri Deroon-cassini\nConnected to: [\u0027Neurological Disorders\u0027 \u0027Neurological Disorders\u0027\n \u0027Neurological Disorders\u0027 \u0027Neurological Disorders\u0027\n \u0027Neurological Disorders\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Surgery"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Alan Bloom", "label": "Alan Bloom", "shape": "dot", "size": 10, "title": "Name: Alan Bloom\nConnected to: [\u0027Addiction\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Pharmacology and Toxicology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "William Gross", "label": "William Gross", "shape": "dot", "size": 10, "title": "Name: William Gross\nConnected to: [\u0027Human Behavioral Research\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Anesthesiology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Kathleen Patterson", "label": "Kathleen Patterson", "shape": "dot", "size": 10, "title": "Name: Kathleen Patterson\nConnected to: [\u0027Human Behavioral Research\u0027 \u0027Neurodegenerative Disorders\u0027\n \u0027Traumatic Brain Injury\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Psychiatry and Behavioral Medicine"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Suresh Kumar", "label": "Suresh Kumar", "shape": "dot", "size": 10, "title": "Name: Suresh Kumar\nConnected to: [\u0027Neurological Disorders\u0027 \u0027Neurological Disorders\u0027\n \u0027Neurological Disorders\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Pathology \u0026 Laboratory Medicine"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Adriana Ioachimescu", "label": "Adriana Ioachimescu", "shape": "dot", "size": 10, "title": "Name: Adriana Ioachimescu\nConnected to: [\u0027Neurological Disorders\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Neurosurgery"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Frederick Freitag", "label": "Frederick Freitag", "shape": "dot", "size": 10, "title": "Name: Frederick Freitag\nConnected to: [\u0027Neurological Disorders\u0027 \u0027Neurological Disorders\u0027\n \u0027Neurological Disorders\u0027 \u0027Neurological Disorders\u0027\n \u0027Neurological Disorders\u0027 \u0027Neurological Disorders\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Neurology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Bhavana  Talluri", "label": "Bhavana  Talluri", "shape": "dot", "size": 10, "title": "Name: Bhavana  Talluri\nConnected to: [\u0027Cellular/Molecular Mechanisms\u0027 \u0027Pain\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Medicine"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Balaraman Kalyanaraman", "label": "Balaraman Kalyanaraman", "shape": "dot", "size": 10, "title": "Name: Balaraman Kalyanaraman\nConnected to: [\u0027Other\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Biophysics"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "James Hokanson", "label": "James Hokanson", "shape": "dot", "size": 10, "title": "Name: James Hokanson\nConnected to: [\u0027Neurological Disorders\u0027 \u0027Neurological Disorders\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Biomedical Engineering"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Joel Miesfeld", "label": "Joel Miesfeld", "shape": "dot", "size": 10, "title": "Name: Joel Miesfeld\nConnected to: [\u0027Neurodegenerative Disorders\u0027 \u0027Opthalmology \u0026 Vision Research\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Ophthalmology and Visual Sciences"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Francesca Marassi", "label": "Francesca Marassi", "shape": "dot", "size": 10, "title": "Name: Francesca Marassi\nConnected to: [\u0027Cellular/Molecular Mechanisms\u0027 \u0027Neurodegenerative Disorders\u0027\n \u0027Opthalmology \u0026 Vision Research\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Biophysics"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Nikita Piryani", "label": "Nikita Piryani", "shape": "dot", "size": 10, "title": "Name: Nikita Piryani\nConnected to: [\u0027Opthalmology \u0026 Vision Research\u0027 \u0027Pain\u0027 \u0027Traumatic Brain Injury\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Medical School"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Muskan Bansal", "label": "Muskan Bansal", "shape": "dot", "size": 10, "title": "Name: Muskan Bansal\nConnected to: [\u0027Neurodegenerative Disorders\u0027 \u0027Neuro-oncology\u0027 \u0027Traumatic Brain Injury\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Medical Scientist Training Program"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Ekokobe Fonkem", "label": "Ekokobe Fonkem", "shape": "dot", "size": 10, "title": "Name: Ekokobe Fonkem\nConnected to: [\u0027Neuro-oncology\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Neurology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Kunal Gupta", "label": "Kunal Gupta", "shape": "dot", "size": 10, "title": "Name: Kunal Gupta\nConnected to: [\u0027Cellular/Molecular Mechanisms\u0027 \u0027Seizure Disorders\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Neurosurgery"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Daniel Lipinski", "label": "Daniel Lipinski", "shape": "dot", "size": 10, "title": "Name: Daniel Lipinski\nConnected to: [\u0027Neurodegenerative Disorders\u0027 \u0027Neuro-imaging\u0027\n \u0027Opthalmology \u0026 Vision Research\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Ophthalmology and Visual Sciences"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Miranda Scalabrino", "label": "Miranda Scalabrino", "shape": "dot", "size": 10, "title": "Name: Miranda Scalabrino\nConnected to: [\u0027Brain Circuits\u0027 \u0027Neurodegenerative Disorders\u0027\n \u0027Opthalmology \u0026 Vision Research\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Ophthalmology and Visual Sciences"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Chuck Hay", "label": "Chuck Hay", "shape": "dot", "size": 10, "title": "Name: Chuck Hay\nConnected to: [\u0027Addiction\u0027 \u0027Cellular/Molecular Mechanisms\u0027 \u0027Neuroinflammation\u0027\n \u0027Neuro-oncology\u0027 \u0027Other\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Neurology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Sara  Kohlbeck", "label": "Sara  Kohlbeck", "shape": "dot", "size": 10, "title": "Name: Sara  Kohlbeck\nConnected to: [\u0027Human Behavioral Research\u0027 \u0027Psychiatric Disorders\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Psychiatry and Behavioral Medicine"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Joseph Kreis", "label": "Joseph Kreis", "shape": "dot", "size": 10, "title": "Name: Joseph Kreis\nConnected to: [\u0027Opthalmology \u0026 Vision Research\u0027 \u0027Sensation and Cognition\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: nan"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Cecilia Hillard", "label": "Cecilia Hillard", "shape": "dot", "size": 10, "title": "Name: Cecilia Hillard\nConnected to: [\u0027Addiction\u0027 \u0027Neurodegenerative Disorders\u0027 \u0027Neuroinflammation\u0027\n \u0027Psychiatric Disorders\u0027 \u0027Traumatic Brain Injury\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Pharmacology and Toxicology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Robyn Furger", "label": "Robyn Furger", "shape": "dot", "size": 10, "title": "Name: Robyn Furger\nConnected to: [\u0027Human Behavioral Research\u0027 \u0027Traumatic Brain Injury\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Neurosurgery"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Alex Salmon", "label": "Alex Salmon", "shape": "dot", "size": 10, "title": "Name: Alex Salmon\nConnected to: [\u0027Opthalmology \u0026 Vision Research\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: nan"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Joseph Barbieri", "label": "Joseph Barbieri", "shape": "dot", "size": 10, "title": "Name: Joseph Barbieri\nConnected to: [\u0027Neurosurgery\u0027 \u0027Neurosurgery\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Microbiology \u0026 Immunology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "David Friedland", "label": "David Friedland", "shape": "dot", "size": 10, "title": "Name: David Friedland\nConnected to: [\u0027Other\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Otolaryngology and Communication Sciences"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Jennifer Sterrett", "label": "Jennifer Sterrett", "shape": "dot", "size": 10, "title": "Name: Jennifer Sterrett\nConnected to: [\u0027Behavioral and Psychiatric Research\u0027\n \u0027Behavioral and Psychiatric Research\u0027\n \u0027Behavioral and Psychiatric Research\u0027\n \u0027Behavioral and Psychiatric Research\u0027\n \u0027Behavioral and Psychiatric Research\u0027\n \u0027Behavioral and Psychiatric Research\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Neuroscience Research Center"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Fabrice Jotterand", "label": "Fabrice Jotterand", "shape": "dot", "size": 10, "title": "Name: Fabrice Jotterand\nConnected to: [\u0027Memory and Cognition\u0027 \u0027Memory and Cognition\u0027 \u0027Memory and Cognition\u0027\n \u0027Memory and Cognition\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Institute for Health \u0026 Equity"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Jennifer Hill", "label": "Jennifer Hill", "shape": "dot", "size": 10, "title": "Name: Jennifer Hill\nConnected to: [\u0027Human Behavioral Research\u0027 \u0027Neurodegenerative Disorders\u0027\n \u0027Spinal Cord Injury \u0026 Repair\u0027 \u0027Traumatic Brain Injury\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Neurosurgery"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Lynn Sheets", "label": "Lynn Sheets", "shape": "dot", "size": 10, "title": "Name: Lynn Sheets\nConnected to: [\u0027Behavioral and Psychiatric Research\u0027\n \u0027Behavioral and Psychiatric Research\u0027\n \u0027Behavioral and Psychiatric Research\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Pediatrics"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Hershel Raff", "label": "Hershel Raff", "shape": "dot", "size": 10, "title": "Name: Hershel Raff\nConnected to: [\u0027Neurological Disorders\u0027 \u0027Neurological Disorders\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Medicine"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "William Drobyski", "label": "William Drobyski", "shape": "dot", "size": 10, "title": "Name: William Drobyski\nConnected to: [\u0027Neuroinflammation\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Medicine"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Timothy Meier", "label": "Timothy Meier", "shape": "dot", "size": 10, "title": "Name: Timothy Meier\nConnected to: [\u0027Traumatic Brain Injury\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Neurosurgery"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Joseph Goveas", "label": "Joseph Goveas", "shape": "dot", "size": 10, "title": "Name: Joseph Goveas\nConnected to: [\u0027Neurodegenerative Disorders\u0027 \u0027Neuroinflammation\u0027 \u0027Psychiatric Disorders\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Psychiatry and Behavioral Medicine"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Lindsay Nelson", "label": "Lindsay Nelson", "shape": "dot", "size": 10, "title": "Name: Lindsay Nelson\nConnected to: [\u0027Human Behavioral Research\u0027 \u0027Neuroinflammation\u0027 \u0027Pain\u0027\n \u0027Psychiatric Disorders\u0027 \u0027Traumatic Brain Injury\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Neurosurgery"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Jyoti Sengupta", "label": "Jyoti Sengupta", "shape": "dot", "size": 10, "title": "Name: Jyoti Sengupta\nConnected to: [\u0027Pain\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Medicine"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Ramani Ramchandran", "label": "Ramani Ramchandran", "shape": "dot", "size": 10, "title": "Name: Ramani Ramchandran\nConnected to: [\u0027Vascular and Circulatory System\u0027 \u0027Vascular and Circulatory System\u0027\n \u0027Vascular and Circulatory System\u0027 \u0027Vascular and Circulatory System\u0027\n \u0027Vascular and Circulatory System\u0027 \u0027Vascular and Circulatory System\u0027\n \u0027Vascular and Circulatory System\u0027 \u0027Vascular and Circulatory System\u0027\n \u0027Vascular and Circulatory System\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Pediatrics"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Jennifer Koop", "label": "Jennifer Koop", "shape": "dot", "size": 10, "title": "Name: Jennifer Koop\nConnected to: [\u0027Behavioral and Psychiatric Research\u0027\n \u0027Behavioral and Psychiatric Research\u0027\n \u0027Behavioral and Psychiatric Research\u0027\n \u0027Behavioral and Psychiatric Research\u0027\n \u0027Behavioral and Psychiatric Research\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Neurology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Kevin Rarick", "label": "Kevin Rarick", "shape": "dot", "size": 10, "title": "Name: Kevin Rarick\nConnected to: [\u0027Neurodegenerative Disorders\u0027 \u0027Neuroinflammation\u0027\n \u0027Traumatic Brain Injury\u0027 \u0027Other\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Pediatrics"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Bonnie Dittel", "label": "Bonnie Dittel", "shape": "dot", "size": 10, "title": "Name: Bonnie Dittel\nConnected to: [\u0027Cellular/Molecular Mechanisms\u0027 \u0027Neurodegenerative Disorders\u0027\n \u0027Neuroinflammation\u0027 \u0027Pain\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Microbiology \u0026 Immunology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Jacek Zielonka", "label": "Jacek Zielonka", "shape": "dot", "size": 10, "title": "Name: Jacek Zielonka\nConnected to: [\u0027Neurodegenerative Disorders\u0027 \u0027Neuroinflammation\u0027\n \u0027Traumatic Brain Injury\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Biophysics"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Jeffrey Binder", "label": "Jeffrey Binder", "shape": "dot", "size": 10, "title": "Name: Jeffrey Binder\nConnected to: [\u0027Memory and Cognition\u0027 \u0027Memory and Cognition\u0027 \u0027Memory and Cognition\u0027\n \u0027Memory and Cognition\u0027 \u0027Memory and Cognition\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Neurology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Xiaojie Liu", "label": "Xiaojie Liu", "shape": "dot", "size": 10, "title": "Name: Xiaojie Liu\nConnected to: [\u0027Addiction\u0027 \u0027Brain Circuits\u0027 \u0027Psychiatric Disorders\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Pharmacology and Toxicology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Seung min Shin", "label": "Seung min Shin", "shape": "dot", "size": 10, "title": "Name: Seung min Shin\nConnected to: [\u0027Cellular/Molecular Mechanisms\u0027 \u0027Neuroinflammation\u0027 \u0027Pain\u0027\n \u0027Spinal Cord Injury \u0026 Repair\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Anesthesiology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Antje Kroner-milsch", "label": "Antje Kroner-milsch", "shape": "dot", "size": 10, "title": "Name: Antje Kroner-milsch\nConnected to: [\u0027Neuroinflammation\u0027 \u0027Spinal Cord Injury \u0026 Repair\u0027\n \u0027Traumatic Brain Injury\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Neurosurgery"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Pippa Simpson", "label": "Pippa Simpson", "shape": "dot", "size": 10, "title": "Name: Pippa Simpson\nConnected to: [\u0027Memory and Cognition\u0027 \u0027Memory and Cognition\u0027 \u0027Memory and Cognition\u0027\n \u0027Memory and Cognition\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Pediatrics"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Xuelin Lou", "label": "Xuelin Lou", "shape": "dot", "size": 10, "title": "Name: Xuelin Lou\nConnected to: [\u0027Neurological Disorders\u0027 \u0027Neurological Disorders\u0027\n \u0027Neurological Disorders\u0027 \u0027Neurological Disorders\u0027\n \u0027Neurological Disorders\u0027 \u0027Neurological Disorders\u0027\n \u0027Neurological Disorders\u0027 \u0027Neurological Disorders\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Cell Biology, Neurobiology and Anatomy (CBNA)"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Alissa Butts", "label": "Alissa Butts", "shape": "dot", "size": 10, "title": "Name: Alissa Butts\nConnected to: [\u0027Human Behavioral Research\u0027 \u0027Neurodegenerative Disorders\u0027\n \u0027Neuro-oncology\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Neurology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Keri Hainsworth", "label": "Keri Hainsworth", "shape": "dot", "size": 10, "title": "Name: Keri Hainsworth\nConnected to: [\u0027Human Behavioral Research\u0027 \u0027Pain\u0027 \u0027Other\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Anesthesiology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Leonardo Fernandino", "label": "Leonardo Fernandino", "shape": "dot", "size": 10, "title": "Name: Leonardo Fernandino\nConnected to: [\u0027Brain Circuits\u0027 \u0027Human Behavioral Research\u0027\n \u0027Neurodegenerative Disorders\u0027 \u0027Neuro-imaging\u0027 \u0027Sensation and Cognition\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Neurology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Max Krucoff", "label": "Max Krucoff", "shape": "dot", "size": 10, "title": "Name: Max Krucoff\nConnected to: [\u0027Neurological Disorders\u0027 \u0027Neurological Disorders\u0027\n \u0027Neurological Disorders\u0027 \u0027Neurological Disorders\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Neurosurgery"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Chris Olsen", "label": "Chris Olsen", "shape": "dot", "size": 10, "title": "Name: Chris Olsen\nConnected to: [\u0027Addiction\u0027 \u0027Brain Circuits\u0027 \u0027Neuroinflammation\u0027 \u0027Psychiatric Disorders\u0027\n \u0027Traumatic Brain Injury\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Pharmacology and Toxicology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Irene Kim", "label": "Irene Kim", "shape": "dot", "size": 10, "title": "Name: Irene Kim\nConnected to: [\u0027Neurosurgery\u0027 \u0027Neurosurgery\u0027 \u0027Neurosurgery\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Neurosurgery"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Carol Everson", "label": "Carol Everson", "shape": "dot", "size": 10, "title": "Name: Carol Everson\nConnected to: [\u0027Memory and Cognition\u0027 \u0027Memory and Cognition\u0027 \u0027Memory and Cognition\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Medicine"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "(william) youngchan Park", "label": "(william) youngchan Park", "shape": "dot", "size": 10, "title": "Name: (william) youngchan Park\nConnected to: [\u0027Brain Circuits\u0027 \u0027Cellular/Molecular Mechanisms\u0027\n \u0027Human Behavioral Research\u0027 \u0027Neurodevelopment\u0027 \u0027Neuro-imaging\u0027\n \u0027Neuroinflammation\u0027 \u0027Psychiatric Disorders\u0027 \u0027Other\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Psychiatry and Behavioral Medicine"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Joseph Carroll", "label": "Joseph Carroll", "shape": "dot", "size": 10, "title": "Name: Joseph Carroll\nConnected to: [\u0027Opthalmology \u0026 Vision Research\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Ophthalmology and Visual Sciences"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Amanda Brandow", "label": "Amanda Brandow", "shape": "dot", "size": 10, "title": "Name: Amanda Brandow\nConnected to: [\u0027Neuroinflammation\u0027 \u0027Pain\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Pediatrics"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Samuel Nemanich", "label": "Samuel Nemanich", "shape": "dot", "size": 10, "title": "Name: Samuel Nemanich\nConnected to: [\u0027Human Behavioral Research\u0027 \u0027Neurodevelopment\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Clinical \u0026 Translational Science Institute (CTSI)"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Bruce Kaufman", "label": "Bruce Kaufman", "shape": "dot", "size": 10, "title": "Name: Bruce Kaufman\nConnected to: [\u0027Neurodevelopment\u0027 \u0027Traumatic Brain Injury\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Neurosurgery"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Kelsey Porada", "label": "Kelsey Porada", "shape": "dot", "size": 10, "title": "Name: Kelsey Porada\nConnected to: [\u0027Memory and Cognition\u0027 \u0027Memory and Cognition\u0027 \u0027Memory and Cognition\u0027\n \u0027Memory and Cognition\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Pediatrics"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Jon Lehrmann", "label": "Jon Lehrmann", "shape": "dot", "size": 10, "title": "Name: Jon Lehrmann\nConnected to: [\u0027Addiction\u0027 \u0027Human Behavioral Research\u0027 \u0027Psychiatric Disorders\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Psychiatry and Behavioral Medicine"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Jennifer Apps", "label": "Jennifer Apps", "shape": "dot", "size": 10, "title": "Name: Jennifer Apps\nConnected to: [\u0027Human Behavioral Research\u0027 \u0027Neurodevelopment\u0027 \u0027Traumatic Brain Injury\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Psychiatry and Behavioral Medicine"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Quinn Hogan", "label": "Quinn Hogan", "shape": "dot", "size": 10, "title": "Name: Quinn Hogan\nConnected to: [\u0027Cellular/Molecular Mechanisms\u0027 \u0027Neuroinflammation\u0027 \u0027Pain\u0027\n \u0027Sensation and Cognition\u0027 \u0027Traumatic Brain Injury\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Anesthesiology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Matthew Budde", "label": "Matthew Budde", "shape": "dot", "size": 10, "title": "Name: Matthew Budde\nConnected to: [\u0027Neuro-imaging\u0027 \u0027Spinal Cord Injury \u0026 Repair\u0027 \u0027Traumatic Brain Injury\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Neurosurgery"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Gwendolyn Hoben", "label": "Gwendolyn Hoben", "shape": "dot", "size": 10, "title": "Name: Gwendolyn Hoben\nConnected to: [\u0027Neurological Disorders\u0027 \u0027Neurological Disorders\u0027\n \u0027Neurological Disorders\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Plastic Surgery"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Lezi E", "label": "Lezi E", "shape": "dot", "size": 10, "title": "Name: Lezi E\nConnected to: [\u0027Neurodegenerative Disorders\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Cell Biology, Neurobiology and Anatomy (CBNA)"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Maia Terashvili", "label": "Maia Terashvili", "shape": "dot", "size": 10, "title": "Name: Maia Terashvili\nConnected to: [\u0027Addiction\u0027 \u0027Neuroinflammation\u0027 \u0027Pain\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Obstetrics \u0026 Gynecology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Jenessa Price", "label": "Jenessa Price", "shape": "dot", "size": 10, "title": "Name: Jenessa Price\nConnected to: [\u0027Addiction\u0027 \u0027Human Behavioral Research\u0027 \u0027Psychiatric Disorders\u0027\n \u0027Sensation and Cognition\u0027 \u0027Other\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Surgery"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "John Nerva", "label": "John Nerva", "shape": "dot", "size": 10, "title": "Name: John Nerva\nConnected to: [\u0027Vascular and Circulatory System\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Neurosurgery"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Anthony Correro", "label": "Anthony Correro", "shape": "dot", "size": 10, "title": "Name: Anthony Correro\nConnected to: [\u0027Human Behavioral Research\u0027 \u0027Neurodegenerative Disorders\u0027 \u0027Other\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Neurology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Colleen Trevino", "label": "Colleen Trevino", "shape": "dot", "size": 10, "title": "Name: Colleen Trevino\nConnected to: [\u0027Human Behavioral Research\u0027 \u0027Pain\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Surgery"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Jonathan Enders", "label": "Jonathan Enders", "shape": "dot", "size": 10, "title": "Name: Jonathan Enders\nConnected to: [\u0027Cellular/Molecular Mechanisms\u0027 \u0027Neurodegenerative Disorders\u0027\n \u0027Neurodevelopment\u0027 \u0027Neuroinflammation\u0027 \u0027Pain\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Cell Biology, Neurobiology and Anatomy (CBNA)"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Jennifer Tuscher", "label": "Jennifer Tuscher", "shape": "dot", "size": 10, "title": "Name: Jennifer Tuscher\nConnected to: [\u0027Addiction\u0027 \u0027Cellular/Molecular Mechanisms\u0027 \u0027Sensation and Cognition\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Pharmacology and Toxicology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Eric Jackowiak", "label": "Eric Jackowiak", "shape": "dot", "size": 10, "title": "Name: Eric Jackowiak\nConnected to: [\u0027Neurological Disorders\u0027 \u0027Neurological Disorders\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Neurology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Frank Pintar", "label": "Frank Pintar", "shape": "dot", "size": 10, "title": "Name: Frank Pintar\nConnected to: [\u0027Spinal Cord Injury \u0026 Repair\u0027 \u0027Traumatic Brain Injury\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Biomedical Engineering"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Carissa Tomas", "label": "Carissa Tomas", "shape": "dot", "size": 10, "title": "Name: Carissa Tomas\nConnected to: [\u0027Human Behavioral Research\u0027 \u0027Neuro-imaging\u0027 \u0027Psychiatric Disorders\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Institute for Health \u0026 Equity"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Tugan Muftuler", "label": "Tugan Muftuler", "shape": "dot", "size": 10, "title": "Name: Tugan Muftuler\nConnected to: [\u0027Neurodegenerative Disorders\u0027 \u0027Neuro-imaging\u0027 \u0027Traumatic Brain Injury\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Neurosurgery"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Sydney Timmer-murillo", "label": "Sydney Timmer-murillo", "shape": "dot", "size": 10, "title": "Name: Sydney Timmer-murillo\nConnected to: [\u0027Human Behavioral Research\u0027 \u0027Psychiatric Disorders\u0027 \u0027Other\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Surgery"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Shyam Chaurasia", "label": "Shyam Chaurasia", "shape": "dot", "size": 10, "title": "Name: Shyam Chaurasia\nConnected to: [\u0027Neurodegenerative Disorders\u0027 \u0027Neuroinflammation\u0027\n \u0027Opthalmology \u0026 Vision Research\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Ophthalmology and Visual Sciences"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Samuel Bobholz", "label": "Samuel Bobholz", "shape": "dot", "size": 10, "title": "Name: Samuel Bobholz\nConnected to: [\u0027Neuro-imaging\u0027 \u0027Neuro-oncology\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Radiology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Sunil Mathew", "label": "Sunil Mathew", "shape": "dot", "size": 10, "title": "Name: Sunil Mathew\nConnected to: [\u0027Brain Circuits\u0027 \u0027Seizure Disorders\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Neurosurgery"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Folefac Aminkeng", "label": "Folefac Aminkeng", "shape": "dot", "size": 10, "title": "Name: Folefac Aminkeng\nConnected to: [\u0027Neuro-oncology\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Neurology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Victoria Ronan", "label": "Victoria Ronan", "shape": "dot", "size": 10, "title": "Name: Victoria Ronan\nConnected to: [\u0027Traumatic Brain Injury\u0027 \u0027Other\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Pediatric Critical Care"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Melissa Lancaster", "label": "Melissa Lancaster", "shape": "dot", "size": 10, "title": "Name: Melissa Lancaster\nConnected to: [\u0027Brain Circuits\u0027 \u0027Neurodegenerative Disorders\u0027 \u0027Neuro-imaging\u0027\n \u0027Neuroinflammation\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Neurology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Raquel  Farias-moeller", "label": "Raquel  Farias-moeller", "shape": "dot", "size": 10, "title": "Name: Raquel  Farias-moeller\nConnected to: [\u0027Neuroinflammation\u0027 \u0027Seizure Disorders\u0027 \u0027Traumatic Brain Injury\u0027 \u0027Other\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Neurology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Scott Beardsley", "label": "Scott Beardsley", "shape": "dot", "size": 10, "title": "Name: Scott Beardsley\nConnected to: [\u0027Brain Circuits\u0027 \u0027Human Behavioral Research\u0027\n \u0027Neurodegenerative Disorders\u0027 \u0027Neuro-imaging\u0027 \u0027Seizure Disorders\u0027\n \u0027Sensation and Cognition\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Biomedical Engineering"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Allison Brezinski", "label": "Allison Brezinski", "shape": "dot", "size": 10, "title": "Name: Allison Brezinski\nConnected to: [\u0027Brain Circuits\u0027 \u0027Cellular/Molecular Mechanisms\u0027\n \u0027Spinal Cord Injury \u0026 Repair\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Physiology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Viprav Raju", "label": "Viprav Raju", "shape": "dot", "size": 10, "title": "Name: Viprav Raju\nConnected to: [\u0027Neuro-imaging\u0027 \u0027Pain\u0027 \u0027Spinal Cord Injury \u0026 Repair\u0027\n \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Neurosurgery"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Iwalola Awoyinka", "label": "Iwalola Awoyinka", "shape": "dot", "size": 10, "title": "Name: Iwalola Awoyinka\nConnected to: [\u0027Cellular/Molecular Mechanisms\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Cancer Center"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Emily Welby", "label": "Emily Welby", "shape": "dot", "size": 10, "title": "Name: Emily Welby\nConnected to: [\u0027Cellular/Molecular Mechanisms\u0027 \u0027Neurodegenerative Disorders\u0027\n \u0027Neurodevelopment\u0027 \u0027Opthalmology \u0026 Vision Research\u0027\n \u0027Spinal Cord Injury \u0026 Repair\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Cell Biology, Neurobiology and Anatomy (CBNA)"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Rupesh Chikara", "label": "Rupesh Chikara", "shape": "dot", "size": 10, "title": "Name: Rupesh Chikara\nConnected to: [\u0027Neuro-imaging\u0027 \u0027Seizure Disorders\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Neurology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Niyati Mehta", "label": "Niyati Mehta", "shape": "dot", "size": 10, "title": "Name: Niyati Mehta\nConnected to: [\u0027Neurodevelopment\u0027 \u0027Neuro-imaging\u0027 \u0027Seizure Disorders\u0027\n \u0027Traumatic Brain Injury\u0027 \u0027Other\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Neurology"}, {"color": "#FF00FF", "font": {"color": "black"}, "id": "Pui-ying (penny) Lam", "label": "Pui-ying (penny) Lam", "shape": "dot", "size": 10, "title": "Name: Pui-ying (penny) Lam\nConnected to: [\u0027Cellular/Molecular Mechanisms\u0027 \u0027Neurodegenerative Disorders\u0027\n \u0027Neuro-imaging\u0027 \u0027Neuroinflammation\u0027 \u0027Opthalmology \u0026 Vision Research\u0027\n \u0027Traumatic Brain Injury\u0027 \u0027MCW Neuroscience Research Center\u0027]\nDepartment: Cell Biology, Neurobiology and Anatomy (CBNA)"}]);
+                  edges = new vis.DataSet([{"from": "Neurodegenerative Disorders", "to": "Wei Xu"}, {"from": "Traumatic Brain Injury", "to": "Amadou Camara"}, {"from": "Addiction", "to": "Matthew Hearing"}, {"from": "Psychiatric Disorders", "to": "Matthew Hearing"}, {"from": "Neurological Disorders", "to": "Kristen Bunnell"}, {"from": "Neurological Disorders", "to": "Ryan Brennan"}, {"from": "Neurological Disorders", "to": "Karen-sue Carlson"}, {"from": "Neurological Disorders", "to": "Paul Barkhaus"}, {"from": "Addiction", "to": "Alexander Helfand"}, {"from": "Human Behavioral Research", "to": "Alexander Helfand"}, {"from": "Neurodegenerative Disorders", "to": "Alexander Helfand"}, {"from": "Pain", "to": "Alexander Helfand"}, {"from": "Psychiatric Disorders", "to": "Alexander Helfand"}, {"from": "Traumatic Brain Injury", "to": "Alexander Helfand"}, {"from": "Vascular and Circulatory System", "to": "Marek Cierny"}, {"from": "Addiction", "to": "Qing-song Liu"}, {"from": "Neurodegenerative Disorders", "to": "Qing-song Liu"}, {"from": "Neurological Disorders", "to": "Michelle Loman"}, {"from": "Pain", "to": "Jeff King"}, {"from": "Traumatic Brain Injury", "to": "Jeff King"}, {"from": "Addiction", "to": "Leslie Krause"}, {"from": "Neuroinflammation", "to": "Leslie Krause"}, {"from": "Memory and Cognition", "to": "Sang Lee"}, {"from": "Neurodegenerative Disorders", "to": "Piero Antuono"}, {"from": "Memory and Cognition", "to": "Lisa Conant"}, {"from": "Neurodegenerative Disorders", "to": "Malgorzata Franczak"}, {"from": "Neurological Disorders", "to": "Matthew Hodges"}, {"from": "Traumatic Brain Injury", "to": "Rachel Morris"}, {"from": "Neurological Disorders", "to": "Sam Hooshmand"}, {"from": "Human Behavioral Research", "to": "Sadie Larsen"}, {"from": "Psychiatric Disorders", "to": "Sadie Larsen"}, {"from": "Neurodegenerative Disorders", "to": "Staley Brod"}, {"from": "Neuroinflammation", "to": "Staley Brod"}, {"from": "Neurological Disorders", "to": "Thomas Chelimsky"}, {"from": "Behavioral and Psychiatric Research", "to": "Benjamin Brett"}, {"from": "Neurodegenerative Disorders", "to": "Ross Collery"}, {"from": "Opthalmology \u0026 Vision Research", "to": "Ross Collery"}, {"from": "Addiction", "to": "John Mantsch"}, {"from": "Psychiatric Disorders", "to": "John Mantsch"}, {"from": "Neurological Disorders", "to": "Nashaat Gerges"}, {"from": "Traumatic Brain Injury", "to": "Andrew Bryant"}, {"from": "Addiction", "to": "E brooke Lerner"}, {"from": "Human Behavioral Research", "to": "E brooke Lerner"}, {"from": "Traumatic Brain Injury", "to": "E brooke Lerner"}, {"from": "Neurological Disorders", "to": "Susan Cohen"}, {"from": "Addiction", "to": "Constanza Garcia keller"}, {"from": "Neuroinflammation", "to": "Constanza Garcia keller"}, {"from": "Psychiatric Disorders", "to": "Constanza Garcia keller"}, {"from": "Neurological Disorders", "to": "Andrew Foy"}, {"from": "Neurological Disorders", "to": "Jennifer Evans"}, {"from": "Traumatic Brain Injury", "to": "Binod Balakrishnan"}, {"from": "Neurological Disorders", "to": "Amy Heffelfinger"}, {"from": "Human Behavioral Research", "to": "Scott Baierle"}, {"from": "Neurodegenerative Disorders", "to": "Scott Baierle"}, {"from": "Other", "to": "Scott Baierle"}, {"from": "Neurodegenerative Disorders", "to": "Dominic Fee"}, {"from": "Neuroinflammation", "to": "Dominic Fee"}, {"from": "Spinal Cord Injury \u0026 Repair", "to": "Dominic Fee"}, {"from": "Opthalmology \u0026 Vision Research", "to": "John Conto"}, {"from": "Neurodegenerative Disorders", "to": "Ankan Gupta"}, {"from": "Neuroinflammation", "to": "Ankan Gupta"}, {"from": "Traumatic Brain Injury", "to": "Ankan Gupta"}, {"from": "Addiction", "to": "Abir El-alfy"}, {"from": "Pain", "to": "Abir El-alfy"}, {"from": "Psychiatric Disorders", "to": "Abir El-alfy"}, {"from": "Neurodegenerative Disorders", "to": "Xiaowen Bai"}, {"from": "Neurological Disorders", "to": "Diane Braza"}, {"from": "Pain", "to": "Caron Dean-bernhoft"}, {"from": "Traumatic Brain Injury", "to": "Caron Dean-bernhoft"}, {"from": "Neurological Disorders", "to": "Michael Harris"}, {"from": "Neurological Disorders", "to": "Raquel Farias-moeller"}, {"from": "Neurological Disorders", "to": "Xuecheng Liu"}, {"from": "Addiction", "to": "George Jacobson"}, {"from": "Human Behavioral Research", "to": "George Jacobson"}, {"from": "Pain", "to": "George Jacobson"}, {"from": "Psychiatric Disorders", "to": "George Jacobson"}, {"from": "Neurological Disorders", "to": "Matthew Harmelink"}, {"from": "Neurological Disorders", "to": "Sean Lew"}, {"from": "Neuroinflammation", "to": "Zeljko Bosnjak"}, {"from": "Traumatic Brain Injury", "to": "Zeljko Bosnjak"}, {"from": "Addiction", "to": "Julia Dickson-gomez"}, {"from": "Human Behavioral Research", "to": "Julia Dickson-gomez"}, {"from": "Pain", "to": "Julia Dickson-gomez"}, {"from": "Psychiatric Disorders", "to": "Julia Dickson-gomez"}, {"from": "Human Behavioral Research", "to": "Mohit Agarwal"}, {"from": "Neurodegenerative Disorders", "to": "Mohit Agarwal"}, {"from": "Neuro-oncology", "to": "Mohit Agarwal"}, {"from": "Neurological Disorders", "to": "Ahmed Obeidat"}, {"from": "Traumatic Brain Injury", "to": "Varun Sampat"}, {"from": "Neuroinflammation", "to": "Jose Rosas"}, {"from": "Spinal Cord Injury \u0026 Repair", "to": "Jose Rosas"}, {"from": "Pain", "to": "Bin Pan"}, {"from": "Psychiatric Disorders", "to": "Bin Pan"}, {"from": "Traumatic Brain Injury", "to": "Bin Pan"}, {"from": "Neurological Disorders", "to": "Kirkwood Pritchard"}, {"from": "Pain", "to": "Katelyn Sadler"}, {"from": "Neuroinflammation", "to": "Nicolas Pelisch"}, {"from": "Spinal Cord Injury \u0026 Repair", "to": "Nicolas Pelisch"}, {"from": "Traumatic Brain Injury", "to": "Nicolas Pelisch"}, {"from": "Opthalmology \u0026 Vision Research", "to": "Hanmeng Zhang"}, {"from": "Neurodegenerative Disorders", "to": "Andrew Nencka"}, {"from": "Traumatic Brain Injury", "to": "Andrew Nencka"}, {"from": "Spinal Cord Injury \u0026 Repair", "to": "Aditya Vedantam"}, {"from": "Neurodegenerative Disorders", "to": "Saman Shabani"}, {"from": "Neuro-oncology", "to": "Saman Shabani"}, {"from": "Spinal Cord Injury \u0026 Repair", "to": "Saman Shabani"}, {"from": "Memory and Cognition", "to": "Hernan Rey"}, {"from": "Neurological Disorders", "to": "Christopher Pawela"}, {"from": "Human Behavioral Research", "to": "Steven Weisman"}, {"from": "Pain", "to": "Steven Weisman"}, {"from": "Human Behavioral Research", "to": "Sakthi Sundararajan"}, {"from": "Neuro-oncology", "to": "Daochun Sun"}, {"from": "Neurological Disorders", "to": "Ru-jeng Teng"}, {"from": "Behavioral and Psychiatric Research", "to": "Elisabeth Vogt"}, {"from": "Neurological Disorders", "to": "Laura Umfleet"}, {"from": "Human Behavioral Research", "to": "Jiaqing Tong"}, {"from": "Psychiatric Disorders", "to": "Jiaqing Tong"}, {"from": "Other", "to": "Jennifer Tinklenberg"}, {"from": "Neurological Disorders", "to": "Yu-chieh Wang"}, {"from": "Neurological Disorders", "to": "Manoj Raghavan"}, {"from": "Human Behavioral Research", "to": "Kirti Thummala"}, {"from": "Pain", "to": "Kirti Thummala"}, {"from": "Psychiatric Disorders", "to": "Kirti Thummala"}, {"from": "Memory and Cognition", "to": "Vahab Youssofzadeh"}, {"from": "Memory and Cognition", "to": "Andrey Sorokin"}, {"from": "Traumatic Brain Injury", "to": "Danny Thomas"}, {"from": "Addiction", "to": "Cheryl Stucky"}, {"from": "Neuroinflammation", "to": "Cheryl Stucky"}, {"from": "Pain", "to": "Cheryl Stucky"}, {"from": "Neurodegenerative Disorders", "to": "Neeti Singh"}, {"from": "Spinal Cord Injury \u0026 Repair", "to": "Neeti Singh"}, {"from": "Traumatic Brain Injury", "to": "Neeti Singh"}, {"from": "Psychiatric Disorders", "to": "Carol i-ping Tsao"}, {"from": "Memory and Cognition", "to": "Ronaldo Pereira"}, {"from": "Traumatic Brain Injury", "to": "Kristin Wilmoth"}, {"from": "Neurological Disorders", "to": "Kelly Rentscher"}, {"from": "Human Behavioral Research", "to": "Sadaf Shad"}, {"from": "Neurodegenerative Disorders", "to": "Sadaf Shad"}, {"from": "Neuroinflammation", "to": "Sadaf Shad"}, {"from": "Neuro-oncology", "to": "Sadaf Shad"}, {"from": "Opthalmology \u0026 Vision Research", "to": "Sadaf Shad"}, {"from": "Pain", "to": "Sadaf Shad"}, {"from": "Spinal Cord Injury \u0026 Repair", "to": "Sadaf Shad"}, {"from": "Traumatic Brain Injury", "to": "Sadaf Shad"}, {"from": "Neurological Disorders", "to": "Stephanie Olivier-van stichelen"}, {"from": "Neuro-oncology", "to": "Nathan Zwagerman"}, {"from": "Neurological Disorders", "to": "Pablo Nakagawa"}, {"from": "Neurodegenerative Disorders", "to": "Rebecca Slick"}, {"from": "Behavioral and Psychiatric Research", "to": "Christopher White"}, {"from": "Neuroinflammation", "to": "Shilpa Narayan"}, {"from": "Traumatic Brain Injury", "to": "Shilpa Narayan"}, {"from": "Neurodegenerative Disorders", "to": "Peter Pahapill"}, {"from": "Pain", "to": "Peter Pahapill"}, {"from": "Spinal Cord Injury \u0026 Repair", "to": "Peter Pahapill"}, {"from": "Neurological Disorders", "to": "Michael Thomas"}, {"from": "Neurological Disorders", "to": "Narayan Yoganandan"}, {"from": "Addiction", "to": "Casey Vickstrom"}, {"from": "Psychiatric Disorders", "to": "Casey Vickstrom"}, {"from": "Addiction", "to": "Christopher Roberts"}, {"from": "Brain Circuits", "to": "Christopher Roberts"}, {"from": "Human Behavioral Research", "to": "Christopher Roberts"}, {"from": "Neurodegenerative Disorders", "to": "Christopher Roberts"}, {"from": "Neuroinflammation", "to": "Christopher Roberts"}, {"from": "Pain", "to": "Christopher Roberts"}, {"from": "Psychiatric Disorders", "to": "Christopher Roberts"}, {"from": "Spinal Cord Injury \u0026 Repair", "to": "Christopher Roberts"}, {"from": "Traumatic Brain Injury", "to": "Christopher Roberts"}, {"from": "Behavioral and Psychiatric Research", "to": "John Mccorvy"}, {"from": "Neurological Disorders", "to": "Matthew Durand"}, {"from": "Brain Circuits", "to": "Kajana Satkunendrarajah"}, {"from": "Cellular/Molecular Mechanisms", "to": "Kajana Satkunendrarajah"}, {"from": "Neurodegenerative Disorders", "to": "Kajana Satkunendrarajah"}, {"from": "Spinal Cord Injury \u0026 Repair", "to": "Kajana Satkunendrarajah"}, {"from": "Traumatic Brain Injury", "to": "Kajana Satkunendrarajah"}, {"from": "Neurological Disorders", "to": "Priyanka Shah-basak"}, {"from": "Vascular and Circulatory System", "to": "Curt Sigmund"}, {"from": "Brain Circuits", "to": "Yang Wang"}, {"from": "Neurodegenerative Disorders", "to": "Yang Wang"}, {"from": "Neuro-imaging", "to": "Yang Wang"}, {"from": "Psychiatric Disorders", "to": "Yang Wang"}, {"from": "Traumatic Brain Injury", "to": "Yang Wang"}, {"from": "Neurodegenerative Disorders", "to": "Julie Janecek"}, {"from": "Seizure Disorders", "to": "Julie Janecek"}, {"from": "Neurological Disorders", "to": "Jordan Williams"}, {"from": "Cellular/Molecular Mechanisms", "to": "Hongwei Yu"}, {"from": "Pain", "to": "Hongwei Yu"}, {"from": "Neurological Disorders", "to": "Sara Pillay"}, {"from": "Neurological Disorders", "to": "Grant Sinson"}, {"from": "Vascular and Circulatory System", "to": "Justin Grobe"}, {"from": "Neurological Disorders", "to": "Gary Mouradian"}, {"from": "Cellular/Molecular Mechanisms", "to": "Allison Ebert"}, {"from": "Neurodegenerative Disorders", "to": "Allison Ebert"}, {"from": "Neurodevelopment", "to": "Allison Ebert"}, {"from": "Neuroinflammation", "to": "Allison Ebert"}, {"from": "Neurodegenerative Disorders", "to": "Brian Link"}, {"from": "Neurodevelopment", "to": "Brian Link"}, {"from": "Opthalmology \u0026 Vision Research", "to": "Brian Link"}, {"from": "Neuro-oncology", "to": "Ryuma Tanaka"}, {"from": "Memory and Cognition", "to": "Adam Greenberg"}, {"from": "Traumatic Brain Injury", "to": "Michael Mccrea"}, {"from": "Neurological Disorders", "to": "Astrid  Stucke"}, {"from": "Neurodegenerative Disorders", "to": "Diane Book"}, {"from": "Neurodegenerative Disorders", "to": "Edmund Duthie"}, {"from": "Cellular/Molecular Mechanisms", "to": "Matthew Veldman"}, {"from": "Neurodegenerative Disorders", "to": "Matthew Veldman"}, {"from": "Neurodevelopment", "to": "Matthew Veldman"}, {"from": "Opthalmology \u0026 Vision Research", "to": "Matthew Veldman"}, {"from": "Spinal Cord Injury \u0026 Repair", "to": "Matthew Veldman"}, {"from": "Traumatic Brain Injury", "to": "Matthew Veldman"}, {"from": "Addiction", "to": "David Stowe"}, {"from": "Pain", "to": "David Stowe"}, {"from": "Traumatic Brain Injury", "to": "David Stowe"}, {"from": "Neurological Disorders", "to": "Chad Carlson"}, {"from": "Behavioral and Psychiatric Research", "to": "Jennifer Knight"}, {"from": "Neurological Disorders", "to": "Christina Runge"}, {"from": "Neurological Disorders", "to": "Terri Deroon-cassini"}, {"from": "Addiction", "to": "Alan Bloom"}, {"from": "Human Behavioral Research", "to": "William Gross"}, {"from": "Human Behavioral Research", "to": "Kathleen Patterson"}, {"from": "Neurodegenerative Disorders", "to": "Kathleen Patterson"}, {"from": "Traumatic Brain Injury", "to": "Kathleen Patterson"}, {"from": "Neurological Disorders", "to": "Suresh Kumar"}, {"from": "Neurological Disorders", "to": "Adriana Ioachimescu"}, {"from": "Neurological Disorders", "to": "Frederick Freitag"}, {"from": "Cellular/Molecular Mechanisms", "to": "Bhavana  Talluri"}, {"from": "Pain", "to": "Bhavana  Talluri"}, {"from": "Other", "to": "Balaraman Kalyanaraman"}, {"from": "Neurological Disorders", "to": "James Hokanson"}, {"from": "Neurodegenerative Disorders", "to": "Joel Miesfeld"}, {"from": "Opthalmology \u0026 Vision Research", "to": "Joel Miesfeld"}, {"from": "Cellular/Molecular Mechanisms", "to": "Francesca Marassi"}, {"from": "Neurodegenerative Disorders", "to": "Francesca Marassi"}, {"from": "Opthalmology \u0026 Vision Research", "to": "Francesca Marassi"}, {"from": "Opthalmology \u0026 Vision Research", "to": "Nikita Piryani"}, {"from": "Pain", "to": "Nikita Piryani"}, {"from": "Traumatic Brain Injury", "to": "Nikita Piryani"}, {"from": "Neurodegenerative Disorders", "to": "Muskan Bansal"}, {"from": "Neuro-oncology", "to": "Muskan Bansal"}, {"from": "Traumatic Brain Injury", "to": "Muskan Bansal"}, {"from": "Neuro-oncology", "to": "Ekokobe Fonkem"}, {"from": "Cellular/Molecular Mechanisms", "to": "Kunal Gupta"}, {"from": "Seizure Disorders", "to": "Kunal Gupta"}, {"from": "Neurodegenerative Disorders", "to": "Daniel Lipinski"}, {"from": "Neuro-imaging", "to": "Daniel Lipinski"}, {"from": "Opthalmology \u0026 Vision Research", "to": "Daniel Lipinski"}, {"from": "Brain Circuits", "to": "Miranda Scalabrino"}, {"from": "Neurodegenerative Disorders", "to": "Miranda Scalabrino"}, {"from": "Opthalmology \u0026 Vision Research", "to": "Miranda Scalabrino"}, {"from": "Addiction", "to": "Chuck Hay"}, {"from": "Cellular/Molecular Mechanisms", "to": "Chuck Hay"}, {"from": "Neuroinflammation", "to": "Chuck Hay"}, {"from": "Neuro-oncology", "to": "Chuck Hay"}, {"from": "Other", "to": "Chuck Hay"}, {"from": "Human Behavioral Research", "to": "Sara  Kohlbeck"}, {"from": "Psychiatric Disorders", "to": "Sara  Kohlbeck"}, {"from": "Opthalmology \u0026 Vision Research", "to": "Joseph Kreis"}, {"from": "Sensation and Cognition", "to": "Joseph Kreis"}, {"from": "Addiction", "to": "Cecilia Hillard"}, {"from": "Neurodegenerative Disorders", "to": "Cecilia Hillard"}, {"from": "Neuroinflammation", "to": "Cecilia Hillard"}, {"from": "Psychiatric Disorders", "to": "Cecilia Hillard"}, {"from": "Traumatic Brain Injury", "to": "Cecilia Hillard"}, {"from": "Human Behavioral Research", "to": "Robyn Furger"}, {"from": "Traumatic Brain Injury", "to": "Robyn Furger"}, {"from": "Opthalmology \u0026 Vision Research", "to": "Alex Salmon"}, {"from": "Neurosurgery", "to": "Joseph Barbieri"}, {"from": "Other", "to": "David Friedland"}, {"from": "Behavioral and Psychiatric Research", "to": "Jennifer Sterrett"}, {"from": "Memory and Cognition", "to": "Fabrice Jotterand"}, {"from": "Human Behavioral Research", "to": "Jennifer Hill"}, {"from": "Neurodegenerative Disorders", "to": "Jennifer Hill"}, {"from": "Spinal Cord Injury \u0026 Repair", "to": "Jennifer Hill"}, {"from": "Traumatic Brain Injury", "to": "Jennifer Hill"}, {"from": "Behavioral and Psychiatric Research", "to": "Lynn Sheets"}, {"from": "Neurological Disorders", "to": "Hershel Raff"}, {"from": "Neuroinflammation", "to": "William Drobyski"}, {"from": "Traumatic Brain Injury", "to": "Timothy Meier"}, {"from": "Neurodegenerative Disorders", "to": "Joseph Goveas"}, {"from": "Neuroinflammation", "to": "Joseph Goveas"}, {"from": "Psychiatric Disorders", "to": "Joseph Goveas"}, {"from": "Human Behavioral Research", "to": "Lindsay Nelson"}, {"from": "Neuroinflammation", "to": "Lindsay Nelson"}, {"from": "Pain", "to": "Lindsay Nelson"}, {"from": "Psychiatric Disorders", "to": "Lindsay Nelson"}, {"from": "Traumatic Brain Injury", "to": "Lindsay Nelson"}, {"from": "Pain", "to": "Jyoti Sengupta"}, {"from": "Vascular and Circulatory System", "to": "Ramani Ramchandran"}, {"from": "Behavioral and Psychiatric Research", "to": "Jennifer Koop"}, {"from": "Neurodegenerative Disorders", "to": "Kevin Rarick"}, {"from": "Neuroinflammation", "to": "Kevin Rarick"}, {"from": "Traumatic Brain Injury", "to": "Kevin Rarick"}, {"from": "Other", "to": "Kevin Rarick"}, {"from": "Cellular/Molecular Mechanisms", "to": "Bonnie Dittel"}, {"from": "Neurodegenerative Disorders", "to": "Bonnie Dittel"}, {"from": "Neuroinflammation", "to": "Bonnie Dittel"}, {"from": "Pain", "to": "Bonnie Dittel"}, {"from": "Neurodegenerative Disorders", "to": "Jacek Zielonka"}, {"from": "Neuroinflammation", "to": "Jacek Zielonka"}, {"from": "Traumatic Brain Injury", "to": "Jacek Zielonka"}, {"from": "Memory and Cognition", "to": "Jeffrey Binder"}, {"from": "Addiction", "to": "Xiaojie Liu"}, {"from": "Brain Circuits", "to": "Xiaojie Liu"}, {"from": "Psychiatric Disorders", "to": "Xiaojie Liu"}, {"from": "Cellular/Molecular Mechanisms", "to": "Seung min Shin"}, {"from": "Neuroinflammation", "to": "Seung min Shin"}, {"from": "Pain", "to": "Seung min Shin"}, {"from": "Spinal Cord Injury \u0026 Repair", "to": "Seung min Shin"}, {"from": "Neuroinflammation", "to": "Antje Kroner-milsch"}, {"from": "Spinal Cord Injury \u0026 Repair", "to": "Antje Kroner-milsch"}, {"from": "Traumatic Brain Injury", "to": "Antje Kroner-milsch"}, {"from": "Memory and Cognition", "to": "Pippa Simpson"}, {"from": "Neurological Disorders", "to": "Xuelin Lou"}, {"from": "Human Behavioral Research", "to": "Alissa Butts"}, {"from": "Neurodegenerative Disorders", "to": "Alissa Butts"}, {"from": "Neuro-oncology", "to": "Alissa Butts"}, {"from": "Human Behavioral Research", "to": "Keri Hainsworth"}, {"from": "Pain", "to": "Keri Hainsworth"}, {"from": "Other", "to": "Keri Hainsworth"}, {"from": "Brain Circuits", "to": "Leonardo Fernandino"}, {"from": "Human Behavioral Research", "to": "Leonardo Fernandino"}, {"from": "Neurodegenerative Disorders", "to": "Leonardo Fernandino"}, {"from": "Neuro-imaging", "to": "Leonardo Fernandino"}, {"from": "Sensation and Cognition", "to": "Leonardo Fernandino"}, {"from": "Neurological Disorders", "to": "Max Krucoff"}, {"from": "Addiction", "to": "Chris Olsen"}, {"from": "Brain Circuits", "to": "Chris Olsen"}, {"from": "Neuroinflammation", "to": "Chris Olsen"}, {"from": "Psychiatric Disorders", "to": "Chris Olsen"}, {"from": "Traumatic Brain Injury", "to": "Chris Olsen"}, {"from": "Neurosurgery", "to": "Irene Kim"}, {"from": "Memory and Cognition", "to": "Carol Everson"}, {"from": "Brain Circuits", "to": "(william) youngchan Park"}, {"from": "Cellular/Molecular Mechanisms", "to": "(william) youngchan Park"}, {"from": "Human Behavioral Research", "to": "(william) youngchan Park"}, {"from": "Neurodevelopment", "to": "(william) youngchan Park"}, {"from": "Neuro-imaging", "to": "(william) youngchan Park"}, {"from": "Neuroinflammation", "to": "(william) youngchan Park"}, {"from": "Psychiatric Disorders", "to": "(william) youngchan Park"}, {"from": "Other", "to": "(william) youngchan Park"}, {"from": "Opthalmology \u0026 Vision Research", "to": "Joseph Carroll"}, {"from": "Neuroinflammation", "to": "Amanda Brandow"}, {"from": "Pain", "to": "Amanda Brandow"}, {"from": "Human Behavioral Research", "to": "Samuel Nemanich"}, {"from": "Neurodevelopment", "to": "Samuel Nemanich"}, {"from": "Neurodevelopment", "to": "Bruce Kaufman"}, {"from": "Traumatic Brain Injury", "to": "Bruce Kaufman"}, {"from": "Memory and Cognition", "to": "Kelsey Porada"}, {"from": "Addiction", "to": "Jon Lehrmann"}, {"from": "Human Behavioral Research", "to": "Jon Lehrmann"}, {"from": "Psychiatric Disorders", "to": "Jon Lehrmann"}, {"from": "Human Behavioral Research", "to": "Jennifer Apps"}, {"from": "Neurodevelopment", "to": "Jennifer Apps"}, {"from": "Traumatic Brain Injury", "to": "Jennifer Apps"}, {"from": "Cellular/Molecular Mechanisms", "to": "Quinn Hogan"}, {"from": "Neuroinflammation", "to": "Quinn Hogan"}, {"from": "Pain", "to": "Quinn Hogan"}, {"from": "Sensation and Cognition", "to": "Quinn Hogan"}, {"from": "Traumatic Brain Injury", "to": "Quinn Hogan"}, {"from": "Neuro-imaging", "to": "Matthew Budde"}, {"from": "Spinal Cord Injury \u0026 Repair", "to": "Matthew Budde"}, {"from": "Traumatic Brain Injury", "to": "Matthew Budde"}, {"from": "Neurological Disorders", "to": "Gwendolyn Hoben"}, {"from": "Neurodegenerative Disorders", "to": "Lezi E"}, {"from": "Addiction", "to": "Maia Terashvili"}, {"from": "Neuroinflammation", "to": "Maia Terashvili"}, {"from": "Pain", "to": "Maia Terashvili"}, {"from": "Addiction", "to": "Jenessa Price"}, {"from": "Human Behavioral Research", "to": "Jenessa Price"}, {"from": "Psychiatric Disorders", "to": "Jenessa Price"}, {"from": "Sensation and Cognition", "to": "Jenessa Price"}, {"from": "Other", "to": "Jenessa Price"}, {"from": "Vascular and Circulatory System", "to": "John Nerva"}, {"from": "Human Behavioral Research", "to": "Anthony Correro"}, {"from": "Neurodegenerative Disorders", "to": "Anthony Correro"}, {"from": "Other", "to": "Anthony Correro"}, {"from": "Human Behavioral Research", "to": "Colleen Trevino"}, {"from": "Pain", "to": "Colleen Trevino"}, {"from": "Cellular/Molecular Mechanisms", "to": "Jonathan Enders"}, {"from": "Neurodegenerative Disorders", "to": "Jonathan Enders"}, {"from": "Neurodevelopment", "to": "Jonathan Enders"}, {"from": "Neuroinflammation", "to": "Jonathan Enders"}, {"from": "Pain", "to": "Jonathan Enders"}, {"from": "Addiction", "to": "Jennifer Tuscher"}, {"from": "Cellular/Molecular Mechanisms", "to": "Jennifer Tuscher"}, {"from": "Sensation and Cognition", "to": "Jennifer Tuscher"}, {"from": "Neurological Disorders", "to": "Eric Jackowiak"}, {"from": "Spinal Cord Injury \u0026 Repair", "to": "Frank Pintar"}, {"from": "Traumatic Brain Injury", "to": "Frank Pintar"}, {"from": "Human Behavioral Research", "to": "Carissa Tomas"}, {"from": "Neuro-imaging", "to": "Carissa Tomas"}, {"from": "Psychiatric Disorders", "to": "Carissa Tomas"}, {"from": "Neurodegenerative Disorders", "to": "Tugan Muftuler"}, {"from": "Neuro-imaging", "to": "Tugan Muftuler"}, {"from": "Traumatic Brain Injury", "to": "Tugan Muftuler"}, {"from": "Human Behavioral Research", "to": "Sydney Timmer-murillo"}, {"from": "Psychiatric Disorders", "to": "Sydney Timmer-murillo"}, {"from": "Other", "to": "Sydney Timmer-murillo"}, {"from": "Neurodegenerative Disorders", "to": "Shyam Chaurasia"}, {"from": "Neuroinflammation", "to": "Shyam Chaurasia"}, {"from": "Opthalmology \u0026 Vision Research", "to": "Shyam Chaurasia"}, {"from": "Neuro-imaging", "to": "Samuel Bobholz"}, {"from": "Neuro-oncology", "to": "Samuel Bobholz"}, {"from": "Brain Circuits", "to": "Sunil Mathew"}, {"from": "Seizure Disorders", "to": "Sunil Mathew"}, {"from": "Neuro-oncology", "to": "Folefac Aminkeng"}, {"from": "Traumatic Brain Injury", "to": "Victoria Ronan"}, {"from": "Other", "to": "Victoria Ronan"}, {"from": "Brain Circuits", "to": "Melissa Lancaster"}, {"from": "Neurodegenerative Disorders", "to": "Melissa Lancaster"}, {"from": "Neuro-imaging", "to": "Melissa Lancaster"}, {"from": "Neuroinflammation", "to": "Melissa Lancaster"}, {"from": "Neuroinflammation", "to": "Raquel  Farias-moeller"}, {"from": "Seizure Disorders", "to": "Raquel  Farias-moeller"}, {"from": "Traumatic Brain Injury", "to": "Raquel  Farias-moeller"}, {"from": "Other", "to": "Raquel  Farias-moeller"}, {"from": "Brain Circuits", "to": "Scott Beardsley"}, {"from": "Human Behavioral Research", "to": "Scott Beardsley"}, {"from": "Neurodegenerative Disorders", "to": "Scott Beardsley"}, {"from": "Neuro-imaging", "to": "Scott Beardsley"}, {"from": "Seizure Disorders", "to": "Scott Beardsley"}, {"from": "Sensation and Cognition", "to": "Scott Beardsley"}, {"from": "Brain Circuits", "to": "Allison Brezinski"}, {"from": "Cellular/Molecular Mechanisms", "to": "Allison Brezinski"}, {"from": "Spinal Cord Injury \u0026 Repair", "to": "Allison Brezinski"}, {"from": "Neuro-imaging", "to": "Viprav Raju"}, {"from": "Pain", "to": "Viprav Raju"}, {"from": "Spinal Cord Injury \u0026 Repair", "to": "Viprav Raju"}, {"from": "Cellular/Molecular Mechanisms", "to": "Iwalola Awoyinka"}, {"from": "Cellular/Molecular Mechanisms", "to": "Emily Welby"}, {"from": "Neurodegenerative Disorders", "to": "Emily Welby"}, {"from": "Neurodevelopment", "to": "Emily Welby"}, {"from": "Opthalmology \u0026 Vision Research", "to": "Emily Welby"}, {"from": "Spinal Cord Injury \u0026 Repair", "to": "Emily Welby"}, {"from": "Neuro-imaging", "to": "Rupesh Chikara"}, {"from": "Seizure Disorders", "to": "Rupesh Chikara"}, {"from": "Neurodevelopment", "to": "Niyati Mehta"}, {"from": "Neuro-imaging", "to": "Niyati Mehta"}, {"from": "Seizure Disorders", "to": "Niyati Mehta"}, {"from": "Traumatic Brain Injury", "to": "Niyati Mehta"}, {"from": "Other", "to": "Niyati Mehta"}, {"from": "Cellular/Molecular Mechanisms", "to": "Pui-ying (penny) Lam"}, {"from": "Neurodegenerative Disorders", "to": "Pui-ying (penny) Lam"}, {"from": "Neuro-imaging", "to": "Pui-ying (penny) Lam"}, {"from": "Neuroinflammation", "to": "Pui-ying (penny) Lam"}, {"from": "Opthalmology \u0026 Vision Research", "to": "Pui-ying (penny) Lam"}, {"from": "Traumatic Brain Injury", "to": "Pui-ying (penny) Lam"}, {"from": "MCW Neuroscience Research Center", "to": "Wei Xu"}, {"from": "MCW Neuroscience Research Center", "to": "Amadou Camara"}, {"from": "MCW Neuroscience Research Center", "to": "Matthew Hearing"}, {"from": "MCW Neuroscience Research Center", "to": "Kristen Bunnell"}, {"from": "MCW Neuroscience Research Center", "to": "Ryan Brennan"}, {"from": "MCW Neuroscience Research Center", "to": "Karen-sue Carlson"}, {"from": "MCW Neuroscience Research Center", "to": "Paul Barkhaus"}, {"from": "MCW Neuroscience Research Center", "to": "Alexander Helfand"}, {"from": "MCW Neuroscience Research Center", "to": "Marek Cierny"}, {"from": "MCW Neuroscience Research Center", "to": "Qing-song Liu"}, {"from": "MCW Neuroscience Research Center", "to": "Michelle Loman"}, {"from": "MCW Neuroscience Research Center", "to": "Jeff King"}, {"from": "MCW Neuroscience Research Center", "to": "Leslie Krause"}, {"from": "MCW Neuroscience Research Center", "to": "Sang Lee"}, {"from": "MCW Neuroscience Research Center", "to": "Piero Antuono"}, {"from": "MCW Neuroscience Research Center", "to": "Lisa Conant"}, {"from": "MCW Neuroscience Research Center", "to": "Malgorzata Franczak"}, {"from": "MCW Neuroscience Research Center", "to": "Matthew Hodges"}, {"from": "MCW Neuroscience Research Center", "to": "Rachel Morris"}, {"from": "MCW Neuroscience Research Center", "to": "Sam Hooshmand"}, {"from": "MCW Neuroscience Research Center", "to": "Sadie Larsen"}, {"from": "MCW Neuroscience Research Center", "to": "Staley Brod"}, {"from": "MCW Neuroscience Research Center", "to": "Thomas Chelimsky"}, {"from": "MCW Neuroscience Research Center", "to": "Benjamin Brett"}, {"from": "MCW Neuroscience Research Center", "to": "Ross Collery"}, {"from": "MCW Neuroscience Research Center", "to": "John Mantsch"}, {"from": "MCW Neuroscience Research Center", "to": "Nashaat Gerges"}, {"from": "MCW Neuroscience Research Center", "to": "Andrew Bryant"}, {"from": "MCW Neuroscience Research Center", "to": "E brooke Lerner"}, {"from": "MCW Neuroscience Research Center", "to": "Susan Cohen"}, {"from": "MCW Neuroscience Research Center", "to": "Constanza Garcia keller"}, {"from": "MCW Neuroscience Research Center", "to": "Andrew Foy"}, {"from": "MCW Neuroscience Research Center", "to": "Jennifer Evans"}, {"from": "MCW Neuroscience Research Center", "to": "Binod Balakrishnan"}, {"from": "MCW Neuroscience Research Center", "to": "Amy Heffelfinger"}, {"from": "MCW Neuroscience Research Center", "to": "Scott Baierle"}, {"from": "MCW Neuroscience Research Center", "to": "Dominic Fee"}, {"from": "MCW Neuroscience Research Center", "to": "John Conto"}, {"from": "MCW Neuroscience Research Center", "to": "Ankan Gupta"}, {"from": "MCW Neuroscience Research Center", "to": "Abir El-alfy"}, {"from": "MCW Neuroscience Research Center", "to": "Xiaowen Bai"}, {"from": "MCW Neuroscience Research Center", "to": "Diane Braza"}, {"from": "MCW Neuroscience Research Center", "to": "Caron Dean-bernhoft"}, {"from": "MCW Neuroscience Research Center", "to": "Michael Harris"}, {"from": "MCW Neuroscience Research Center", "to": "Raquel Farias-moeller"}, {"from": "MCW Neuroscience Research Center", "to": "Xuecheng Liu"}, {"from": "MCW Neuroscience Research Center", "to": "George Jacobson"}, {"from": "MCW Neuroscience Research Center", "to": "Matthew Harmelink"}, {"from": "MCW Neuroscience Research Center", "to": "Sean Lew"}, {"from": "MCW Neuroscience Research Center", "to": "Zeljko Bosnjak"}, {"from": "MCW Neuroscience Research Center", "to": "Julia Dickson-gomez"}, {"from": "MCW Neuroscience Research Center", "to": "Mohit Agarwal"}, {"from": "MCW Neuroscience Research Center", "to": "Ahmed Obeidat"}, {"from": "MCW Neuroscience Research Center", "to": "Varun Sampat"}, {"from": "MCW Neuroscience Research Center", "to": "Jose Rosas"}, {"from": "MCW Neuroscience Research Center", "to": "Bin Pan"}, {"from": "MCW Neuroscience Research Center", "to": "Kirkwood Pritchard"}, {"from": "MCW Neuroscience Research Center", "to": "Katelyn Sadler"}, {"from": "MCW Neuroscience Research Center", "to": "Nicolas Pelisch"}, {"from": "MCW Neuroscience Research Center", "to": "Hanmeng Zhang"}, {"from": "MCW Neuroscience Research Center", "to": "Andrew Nencka"}, {"from": "MCW Neuroscience Research Center", "to": "Aditya Vedantam"}, {"from": "MCW Neuroscience Research Center", "to": "Saman Shabani"}, {"from": "MCW Neuroscience Research Center", "to": "Hernan Rey"}, {"from": "MCW Neuroscience Research Center", "to": "Christopher Pawela"}, {"from": "MCW Neuroscience Research Center", "to": "Steven Weisman"}, {"from": "MCW Neuroscience Research Center", "to": "Sakthi Sundararajan"}, {"from": "MCW Neuroscience Research Center", "to": "Daochun Sun"}, {"from": "MCW Neuroscience Research Center", "to": "Ru-jeng Teng"}, {"from": "MCW Neuroscience Research Center", "to": "Elisabeth Vogt"}, {"from": "MCW Neuroscience Research Center", "to": "Laura Umfleet"}, {"from": "MCW Neuroscience Research Center", "to": "Jiaqing Tong"}, {"from": "MCW Neuroscience Research Center", "to": "Jennifer Tinklenberg"}, {"from": "MCW Neuroscience Research Center", "to": "Yu-chieh Wang"}, {"from": "MCW Neuroscience Research Center", "to": "Manoj Raghavan"}, {"from": "MCW Neuroscience Research Center", "to": "Kirti Thummala"}, {"from": "MCW Neuroscience Research Center", "to": "Vahab Youssofzadeh"}, {"from": "MCW Neuroscience Research Center", "to": "Andrey Sorokin"}, {"from": "MCW Neuroscience Research Center", "to": "Danny Thomas"}, {"from": "MCW Neuroscience Research Center", "to": "Cheryl Stucky"}, {"from": "MCW Neuroscience Research Center", "to": "Neeti Singh"}, {"from": "MCW Neuroscience Research Center", "to": "Carol i-ping Tsao"}, {"from": "MCW Neuroscience Research Center", "to": "Ronaldo Pereira"}, {"from": "MCW Neuroscience Research Center", "to": "Kristin Wilmoth"}, {"from": "MCW Neuroscience Research Center", "to": "Kelly Rentscher"}, {"from": "MCW Neuroscience Research Center", "to": "Sadaf Shad"}, {"from": "MCW Neuroscience Research Center", "to": "Stephanie Olivier-van stichelen"}, {"from": "MCW Neuroscience Research Center", "to": "Nathan Zwagerman"}, {"from": "MCW Neuroscience Research Center", "to": "Pablo Nakagawa"}, {"from": "MCW Neuroscience Research Center", "to": "Rebecca Slick"}, {"from": "MCW Neuroscience Research Center", "to": "Christopher White"}, {"from": "MCW Neuroscience Research Center", "to": "Shilpa Narayan"}, {"from": "MCW Neuroscience Research Center", "to": "Peter Pahapill"}, {"from": "MCW Neuroscience Research Center", "to": "Michael Thomas"}, {"from": "MCW Neuroscience Research Center", "to": "Narayan Yoganandan"}, {"from": "MCW Neuroscience Research Center", "to": "Casey Vickstrom"}, {"from": "MCW Neuroscience Research Center", "to": "Christopher Roberts"}, {"from": "MCW Neuroscience Research Center", "to": "John Mccorvy"}, {"from": "MCW Neuroscience Research Center", "to": "Matthew Durand"}, {"from": "MCW Neuroscience Research Center", "to": "Kajana Satkunendrarajah"}, {"from": "MCW Neuroscience Research Center", "to": "Priyanka Shah-basak"}, {"from": "MCW Neuroscience Research Center", "to": "Curt Sigmund"}, {"from": "MCW Neuroscience Research Center", "to": "Yang Wang"}, {"from": "MCW Neuroscience Research Center", "to": "Julie Janecek"}, {"from": "MCW Neuroscience Research Center", "to": "Jordan Williams"}, {"from": "MCW Neuroscience Research Center", "to": "Hongwei Yu"}, {"from": "MCW Neuroscience Research Center", "to": "Sara Pillay"}, {"from": "MCW Neuroscience Research Center", "to": "Grant Sinson"}, {"from": "MCW Neuroscience Research Center", "to": "Justin Grobe"}, {"from": "MCW Neuroscience Research Center", "to": "Gary Mouradian"}, {"from": "MCW Neuroscience Research Center", "to": "Allison Ebert"}, {"from": "MCW Neuroscience Research Center", "to": "Brian Link"}, {"from": "MCW Neuroscience Research Center", "to": "Ryuma Tanaka"}, {"from": "MCW Neuroscience Research Center", "to": "Adam Greenberg"}, {"from": "MCW Neuroscience Research Center", "to": "Michael Mccrea"}, {"from": "MCW Neuroscience Research Center", "to": "Astrid  Stucke"}, {"from": "MCW Neuroscience Research Center", "to": "Diane Book"}, {"from": "MCW Neuroscience Research Center", "to": "Edmund Duthie"}, {"from": "MCW Neuroscience Research Center", "to": "Matthew Veldman"}, {"from": "MCW Neuroscience Research Center", "to": "David Stowe"}, {"from": "MCW Neuroscience Research Center", "to": "Chad Carlson"}, {"from": "MCW Neuroscience Research Center", "to": "Jennifer Knight"}, {"from": "MCW Neuroscience Research Center", "to": "Christina Runge"}, {"from": "MCW Neuroscience Research Center", "to": "Terri Deroon-cassini"}, {"from": "MCW Neuroscience Research Center", "to": "Alan Bloom"}, {"from": "MCW Neuroscience Research Center", "to": "William Gross"}, {"from": "MCW Neuroscience Research Center", "to": "Kathleen Patterson"}, {"from": "MCW Neuroscience Research Center", "to": "Suresh Kumar"}, {"from": "MCW Neuroscience Research Center", "to": "Adriana Ioachimescu"}, {"from": "MCW Neuroscience Research Center", "to": "Frederick Freitag"}, {"from": "MCW Neuroscience Research Center", "to": "Bhavana  Talluri"}, {"from": "MCW Neuroscience Research Center", "to": "Balaraman Kalyanaraman"}, {"from": "MCW Neuroscience Research Center", "to": "James Hokanson"}, {"from": "MCW Neuroscience Research Center", "to": "Joel Miesfeld"}, {"from": "MCW Neuroscience Research Center", "to": "Francesca Marassi"}, {"from": "MCW Neuroscience Research Center", "to": "Nikita Piryani"}, {"from": "MCW Neuroscience Research Center", "to": "Muskan Bansal"}, {"from": "MCW Neuroscience Research Center", "to": "Ekokobe Fonkem"}, {"from": "MCW Neuroscience Research Center", "to": "Kunal Gupta"}, {"from": "MCW Neuroscience Research Center", "to": "Daniel Lipinski"}, {"from": "MCW Neuroscience Research Center", "to": "Miranda Scalabrino"}, {"from": "MCW Neuroscience Research Center", "to": "Chuck Hay"}, {"from": "MCW Neuroscience Research Center", "to": "Sara  Kohlbeck"}, {"from": "MCW Neuroscience Research Center", "to": "Joseph Kreis"}, {"from": "MCW Neuroscience Research Center", "to": "Cecilia Hillard"}, {"from": "MCW Neuroscience Research Center", "to": "Robyn Furger"}, {"from": "MCW Neuroscience Research Center", "to": "Alex Salmon"}, {"from": "MCW Neuroscience Research Center", "to": "Joseph Barbieri"}, {"from": "MCW Neuroscience Research Center", "to": "David Friedland"}, {"from": "MCW Neuroscience Research Center", "to": "Jennifer Sterrett"}, {"from": "MCW Neuroscience Research Center", "to": "Fabrice Jotterand"}, {"from": "MCW Neuroscience Research Center", "to": "Jennifer Hill"}, {"from": "MCW Neuroscience Research Center", "to": "Lynn Sheets"}, {"from": "MCW Neuroscience Research Center", "to": "Hershel Raff"}, {"from": "MCW Neuroscience Research Center", "to": "William Drobyski"}, {"from": "MCW Neuroscience Research Center", "to": "Timothy Meier"}, {"from": "MCW Neuroscience Research Center", "to": "Joseph Goveas"}, {"from": "MCW Neuroscience Research Center", "to": "Lindsay Nelson"}, {"from": "MCW Neuroscience Research Center", "to": "Jyoti Sengupta"}, {"from": "MCW Neuroscience Research Center", "to": "Ramani Ramchandran"}, {"from": "MCW Neuroscience Research Center", "to": "Jennifer Koop"}, {"from": "MCW Neuroscience Research Center", "to": "Kevin Rarick"}, {"from": "MCW Neuroscience Research Center", "to": "Bonnie Dittel"}, {"from": "MCW Neuroscience Research Center", "to": "Jacek Zielonka"}, {"from": "MCW Neuroscience Research Center", "to": "Jeffrey Binder"}, {"from": "MCW Neuroscience Research Center", "to": "Xiaojie Liu"}, {"from": "MCW Neuroscience Research Center", "to": "Seung min Shin"}, {"from": "MCW Neuroscience Research Center", "to": "Antje Kroner-milsch"}, {"from": "MCW Neuroscience Research Center", "to": "Pippa Simpson"}, {"from": "MCW Neuroscience Research Center", "to": "Xuelin Lou"}, {"from": "MCW Neuroscience Research Center", "to": "Alissa Butts"}, {"from": "MCW Neuroscience Research Center", "to": "Keri Hainsworth"}, {"from": "MCW Neuroscience Research Center", "to": "Leonardo Fernandino"}, {"from": "MCW Neuroscience Research Center", "to": "Max Krucoff"}, {"from": "MCW Neuroscience Research Center", "to": "Chris Olsen"}, {"from": "MCW Neuroscience Research Center", "to": "Irene Kim"}, {"from": "MCW Neuroscience Research Center", "to": "Carol Everson"}, {"from": "MCW Neuroscience Research Center", "to": "(william) youngchan Park"}, {"from": "MCW Neuroscience Research Center", "to": "Joseph Carroll"}, {"from": "MCW Neuroscience Research Center", "to": "Amanda Brandow"}, {"from": "MCW Neuroscience Research Center", "to": "Samuel Nemanich"}, {"from": "MCW Neuroscience Research Center", "to": "Bruce Kaufman"}, {"from": "MCW Neuroscience Research Center", "to": "Kelsey Porada"}, {"from": "MCW Neuroscience Research Center", "to": "Jon Lehrmann"}, {"from": "MCW Neuroscience Research Center", "to": "Jennifer Apps"}, {"from": "MCW Neuroscience Research Center", "to": "Quinn Hogan"}, {"from": "MCW Neuroscience Research Center", "to": "Matthew Budde"}, {"from": "MCW Neuroscience Research Center", "to": "Gwendolyn Hoben"}, {"from": "MCW Neuroscience Research Center", "to": "Lezi E"}, {"from": "MCW Neuroscience Research Center", "to": "Maia Terashvili"}, {"from": "MCW Neuroscience Research Center", "to": "Jenessa Price"}, {"from": "MCW Neuroscience Research Center", "to": "John Nerva"}, {"from": "MCW Neuroscience Research Center", "to": "Anthony Correro"}, {"from": "MCW Neuroscience Research Center", "to": "Colleen Trevino"}, {"from": "MCW Neuroscience Research Center", "to": "Jonathan Enders"}, {"from": "MCW Neuroscience Research Center", "to": "Jennifer Tuscher"}, {"from": "MCW Neuroscience Research Center", "to": "Eric Jackowiak"}, {"from": "MCW Neuroscience Research Center", "to": "Frank Pintar"}, {"from": "MCW Neuroscience Research Center", "to": "Carissa Tomas"}, {"from": "MCW Neuroscience Research Center", "to": "Tugan Muftuler"}, {"from": "MCW Neuroscience Research Center", "to": "Sydney Timmer-murillo"}, {"from": "MCW Neuroscience Research Center", "to": "Shyam Chaurasia"}, {"from": "MCW Neuroscience Research Center", "to": "Samuel Bobholz"}, {"from": "MCW Neuroscience Research Center", "to": "Sunil Mathew"}, {"from": "MCW Neuroscience Research Center", "to": "Folefac Aminkeng"}, {"from": "MCW Neuroscience Research Center", "to": "Victoria Ronan"}, {"from": "MCW Neuroscience Research Center", "to": "Melissa Lancaster"}, {"from": "MCW Neuroscience Research Center", "to": "Raquel  Farias-moeller"}, {"from": "MCW Neuroscience Research Center", "to": "Scott Beardsley"}, {"from": "MCW Neuroscience Research Center", "to": "Allison Brezinski"}, {"from": "MCW Neuroscience Research Center", "to": "Viprav Raju"}, {"from": "MCW Neuroscience Research Center", "to": "Iwalola Awoyinka"}, {"from": "MCW Neuroscience Research Center", "to": "Emily Welby"}, {"from": "MCW Neuroscience Research Center", "to": "Rupesh Chikara"}, {"from": "MCW Neuroscience Research Center", "to": "Niyati Mehta"}, {"from": "MCW Neuroscience Research Center", "to": "Pui-ying (penny) Lam"}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {"nodes": {"font": {"size": 40}}, "physics": {"enabled": true, "barnesHut": {"gravitationalConstant": -8000, "centralGravity": 0.3, "springLength": 100, "springConstant": 0.001, "damping": 0.1, "overlap": 1.0}}};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+                    network.on("click", neighbourhoodHighlight);
+                  
+
+                  
+                    network.on("selectNode", neighbourhoodHighlight);
+                  
+
+                  
+
+
+                  
+                      network.on("stabilizationProgress", function(params) {
+                          document.getElementById('loadingBar').removeAttribute("style");
+                          var maxWidth = 496;
+                          var minWidth = 20;
+                          var widthFactor = params.iterations/params.total;
+                          var width = Math.max(minWidth,maxWidth * widthFactor);
+                          document.getElementById('bar').style.width = width + 'px';
+                          document.getElementById('text').innerHTML = Math.round(widthFactor*100) + '%';
+                      });
+                      network.once("stabilizationIterationsDone", function() {
+                          document.getElementById('text').innerHTML = '100%';
+                          document.getElementById('bar').style.width = '496px';
+                          document.getElementById('loadingBar').style.opacity = 0;
+                          // really clean the dom element
+                          setTimeout(function () {document.getElementById('loadingBar').style.display = 'none';}, 500);
+                      });
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>
